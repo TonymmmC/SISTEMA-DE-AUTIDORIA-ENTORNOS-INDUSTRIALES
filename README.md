@@ -68,3 +68,16 @@ soltar cuando aparezca "Connecting".
 Cuando flashees y haya errores o comportamiento inesperado, copiar la salida
 completa del monitor serial y enviarla al dev junto con la descripcion de
 que se intentaba hacer.
+
+## Desarrollo local del dashboard (solo para el dev)
+
+El dashboard se puede iterar sin flashear el Edge101. Desde la raiz del
+proyecto:
+
+    cd data
+    python -m http.server 8080
+
+Abrir http://localhost:8080. El dashboard renderiza con datos simulados
+(aparece la leyenda "modo desarrollo local -- data simulada" en el header).
+Cuando se flashea al Edge101 y se accede por http://edge101.local, los
+datos pasan a ser reales automaticamente.
