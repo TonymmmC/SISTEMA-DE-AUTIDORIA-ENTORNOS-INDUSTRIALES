@@ -9,26 +9,83 @@
 <body>
   <header>
     <h1>Sistema Auditoria Edge101</h1>
-    <p class="subtitulo">Monitoreo y auditoria de seguridad en redes IIoT</p>
     <span id="modo-local" class="oculto">modo desarrollo local -- data simulada</span>
   </header>
-  <main>
-    <section class="estado">
-      <h2>Estado del sistema</h2>
-      <dl>
-        <dt>Dispositivo</dt>      <dd id="device">--</dd>
-        <dt>Version firmware</dt> <dd id="version">--</dd>
-        <dt>Build</dt>            <dd id="build">--</dd>
-        <dt>Uptime</dt>           <dd id="uptime">--</dd>
-        <dt>IP</dt>               <dd id="ip">--</dd>
-        <dt>Heap libre</dt>       <dd id="heap">--</dd>
-      </dl>
-      <p class="indicador" id="indicador">Cargando...</p>
-    </section>
-  </main>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <ul>
+        <li><a href="#/sistema" data-link>Sistema</a></li>
+        <li><a href="#/ble" data-link>BLE</a></li>
+        <li><a href="#/modbus" data-link>Modbus</a></li>
+        <li><a href="#/can" data-link>CAN</a></li>
+        <li><a href="#/alertas" data-link>Alertas</a></li>
+        <li><a href="#/logs" data-link>Logs</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <section data-seccion="sistema">
+        <h2>Estado del sistema</h2>
+        <dl>
+          <dt>Dispositivo</dt>      <dd id="device">--</dd>
+          <dt>Version firmware</dt> <dd id="version">--</dd>
+          <dt>Build</dt>            <dd id="build">--</dd>
+          <dt>Uptime</dt>           <dd id="uptime">--</dd>
+          <dt>IP</dt>               <dd id="ip">--</dd>
+          <dt>Heap libre</dt>       <dd id="heap">--</dd>
+        </dl>
+        <p class="indicador" id="indicador">Cargando...</p>
+      </section>
+
+      <section data-seccion="ble" class="oculto">
+        <h2>Dispositivos Bluetooth</h2>
+        <p class="placeholder">Datos simulados -- implementacion en Plan 3.</p>
+        <table id="tabla-ble">
+          <thead><tr><th>MAC</th><th>Nombre</th><th>RSSI</th><th>Visto</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section data-seccion="modbus" class="oculto">
+        <h2>Trafico Modbus RTU</h2>
+        <p class="placeholder">Datos simulados -- implementacion en Plan 5.</p>
+        <table id="tabla-modbus">
+          <thead><tr><th>Hora</th><th>Esclavo</th><th>Funcion</th><th>Registro</th><th>Datos</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section data-seccion="can" class="oculto">
+        <h2>Trafico CAN Bus</h2>
+        <p class="placeholder">Datos simulados -- implementacion en Plan 6.</p>
+        <table id="tabla-can">
+          <thead><tr><th>Hora</th><th>ID</th><th>DLC</th><th>Datos</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section data-seccion="alertas" class="oculto">
+        <h2>Alertas activas</h2>
+        <p class="placeholder">Datos simulados -- implementacion en Plan 7.</p>
+        <ul id="lista-alertas"></ul>
+      </section>
+
+      <section data-seccion="logs" class="oculto">
+        <h2>Archivos de log</h2>
+        <p class="placeholder">Datos simulados -- implementacion en Plan 4.</p>
+        <table id="tabla-logs">
+          <thead><tr><th>Archivo</th><th>Fecha</th><th>Tamano</th><th>Eventos</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
   <footer>
-    <p>UNIFRANZ -- Programacion de Sistemas Embebidos -- Gestion I-2026</p>
+    <p>Sistema Auditoria Edge101 -- Monitoreo de seguridad IIoT</p>
   </footer>
+
   <script src="/app.js"></script>
 </body>
 </html>

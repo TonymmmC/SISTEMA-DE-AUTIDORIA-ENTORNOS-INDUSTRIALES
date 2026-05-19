@@ -47,6 +47,18 @@ Proyecto academico -- UNIFRANZ, Programacion de Sistemas Embebidos, gestion I-20
 Si mDNS no funciona en tu red, el monitor serial mostrara la IP asignada
 por DHCP. Usar esa IP directamente: `http://<ip>`.
 
+El dashboard tiene 6 secciones navegables via el sidebar:
+
+- **Sistema** -- estado del Edge101 en tiempo real (datos reales del firmware).
+- **BLE** -- dispositivos Bluetooth detectados (datos reales en Plan 3).
+- **Modbus** -- trafico Modbus RTU capturado (datos reales en Plan 5).
+- **CAN** -- trafico CAN Bus capturado (datos reales en Plan 6).
+- **Alertas** -- eventos de seguridad activos (datos reales en Plan 7).
+- **Logs** -- archivos de log en SD (datos reales en Plan 4).
+
+Se puede navegar directamente a cada seccion por URL:
+`http://edge101.local/#/ble`, `http://edge101.local/#/modbus`, etc.
+
 ## Troubleshooting
 
 **El puerto COM no aparece en VS Code:**
