@@ -1,0 +1,7 @@
+{
+  "name": "edge_network",
+  "version": "0.1.0",
+  "description": "Ethernet + mDNS para Edge101",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

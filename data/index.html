@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema Auditoria Edge101</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Sistema Auditoria Edge101</h1>
+    <p class="subtitulo">Monitoreo y auditoria de seguridad en redes IIoT</p>
+  </header>
+  <main>
+    <section class="estado">
+      <h2>Estado del sistema</h2>
+      <dl>
+        <dt>Dispositivo</dt>      <dd id="device">--</dd>
+        <dt>Version firmware</dt> <dd id="version">--</dd>
+        <dt>Build</dt>            <dd id="build">--</dd>
+        <dt>Uptime</dt>           <dd id="uptime">--</dd>
+        <dt>IP</dt>               <dd id="ip">--</dd>
+        <dt>Heap libre</dt>       <dd id="heap">--</dd>
+      </dl>
+      <p class="indicador" id="indicador">Cargando...</p>
+    </section>
+  </main>
+  <footer>
+    <p>UNIFRANZ -- Programacion de Sistemas Embebidos -- Gestion I-2026</p>
+  </footer>
+  <script src="/app.js"></script>
+</body>
+</html>
