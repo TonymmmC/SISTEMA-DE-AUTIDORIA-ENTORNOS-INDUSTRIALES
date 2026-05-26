@@ -22,5 +22,9 @@ constexpr uint32_t SERIAL_BAUD = 115200;
 constexpr uint32_t HEAP_MONITOR_INTERVAL_MS = 60000;
 constexpr uint32_t HEARTBEAT_INTERVAL_MS    = 5000;
 
+// NTP
+constexpr const char* NTP_SERVER_1 = "pool.ntp.org";
+constexpr const char* NTP_SERVER_2 = "time.nist.gov";
+
 // Watchdog timeout (s)
 constexpr uint32_t WATCHDOG_TIMEOUT_S = 30;

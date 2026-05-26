@@ -1,0 +1,8 @@
+{
+  "name": "edge_eventbus",
+  "version": "0.1.0",
+  "description": "Bus de eventos FreeRTOS para comunicacion entre modulos de captura y el logger.",
+  "authors": { "name": "Sistema Auditoria Edge101" },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

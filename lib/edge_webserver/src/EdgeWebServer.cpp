@@ -2,10 +2,13 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
+#include <SD.h>
 #include <ArduinoJson.h>
 #include "config.h"
 #include "EdgeNetwork.h"
 #include "EdgeBle.h"
+#include "EdgeLogger.h"
+#include "EdgeStorage.h"
 
 namespace edge {
 
@@ -57,6 +60,87 @@ bool initWebServer() {
         char out[5120];
         serializeJson(doc, out, sizeof(out));
         request->send(200, "application/json", out);
+    });
+
+    s_server.on("/api/events", HTTP_GET, [](AsyncWebServerRequest* req) {
+        static AuditEvent buf[64];
+        size_t n = edge::obtenerEventosRecientes(buf, 64);
+
+        JsonDocument doc;
+        JsonArray arr = doc.to<JsonArray>();
+        for (size_t i = 0; i < n; i++) {
+            JsonObject e = arr.add<JsonObject>();
+            e["utc"]       = (uint32_t)buf[i].utc;
+            e["uptime_ms"] = buf[i].uptimeMs;
+            e["source"]    = buf[i].source;
+            e["detail"]    = buf[i].detail;
+        }
+        char out[6144];
+        serializeJson(doc, out, sizeof(out));
+        req->send(200, "application/json", out);
+    });
+
+    s_server.on("/api/logs", HTTP_GET, [](AsyncWebServerRequest* req) {
+        JsonDocument doc;
+        if (!edge::sdDisponible()) {
+            doc["sd"] = false;
+            JsonArray arr = doc["archivos"].to<JsonArray>();
+            (void)arr;
+            char out[64];
+            serializeJson(doc, out, sizeof(out));
+            req->send(200, "application/json", out);
+            return;
+        }
+
+        doc["sd"] = true;
+        JsonArray arr = doc["archivos"].to<JsonArray>();
+        // Buffer estatico: listarArchivosAudit recibe funcion sin captura
+        static struct { char nombre[32]; size_t bytes; } s_files[32];
+        static size_t s_fileCount = 0;
+        s_fileCount = 0;
+        edge::listarArchivosAudit([](const char* nombre, size_t bytes) {
+            if (s_fileCount < 32) {
+                strncpy(s_files[s_fileCount].nombre, nombre, 31);
+                s_files[s_fileCount].nombre[31] = '\0';
+                s_files[s_fileCount].bytes = bytes;
+                s_fileCount++;
+            }
+        });
+        for (size_t i = 0; i < s_fileCount; i++) {
+            JsonObject f = arr.add<JsonObject>();
+            f["nombre"] = s_files[i].nombre;
+            f["bytes"]  = (uint32_t)s_files[i].bytes;
+        }
+        char out[2048];
+        serializeJson(doc, out, sizeof(out));
+        req->send(200, "application/json", out);
+    });
+
+    s_server.on("/api/logs/download", HTTP_GET, [](AsyncWebServerRequest* req) {
+        if (!req->hasParam("file")) {
+            req->send(400, "text/plain", "Parametro file requerido");
+            return;
+        }
+        String nombre = req->getParam("file")->value();
+        // Validacion estricta: solo nombre plano .csv, sin path separators ni ..
+        if (nombre.length() == 0 || nombre.length() > 30
+            || !nombre.endsWith(".csv")
+            || nombre.indexOf('/') >= 0
+            || nombre.indexOf('\\') >= 0
+            || nombre.indexOf("..") >= 0) {
+            req->send(400, "text/plain", "Nombre de archivo invalido");
+            return;
+        }
+        if (!edge::sdDisponible()) {
+            req->send(404, "text/plain", "microSD no disponible");
+            return;
+        }
+        String path = String("/audit/") + nombre;
+        if (!SD.exists(path.c_str())) {
+            req->send(404, "text/plain", "Archivo no encontrado");
+            return;
+        }
+        req->send(SD, path.c_str(), "text/csv", true);
     });
 
     s_server.onNotFound([](AsyncWebServerRequest* request) {

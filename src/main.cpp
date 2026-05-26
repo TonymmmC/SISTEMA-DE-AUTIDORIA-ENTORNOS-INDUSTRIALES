@@ -2,6 +2,9 @@
 #include "config.h"
 #include "pins.h"
 #include "EdgeNetwork.h"
+#include "EdgeStorage.h"
+#include "EdgeEventBus.h"
+#include "EdgeLogger.h"
 #include "EdgeWebServer.h"
 #include "EdgeBle.h"
 
@@ -23,6 +26,19 @@ void setup() {
 
     if (!edge::initNetwork()) {
         Serial.println("[boot] FALLO: red no operativa");
+        return;
+    }
+
+    // SD: fallo no es fatal -- sistema sigue sin persistencia
+    edge::initStorage();
+
+    if (!edge::initEventBus()) {
+        Serial.println("[boot] FALLO: event bus no operativo");
+        return;
+    }
+
+    if (!edge::initLogger()) {
+        Serial.println("[boot] FALLO: logger no operativo");
         return;
     }
 

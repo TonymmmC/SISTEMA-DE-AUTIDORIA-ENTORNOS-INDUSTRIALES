@@ -2,6 +2,7 @@
 #include <ETH.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
+#include <esp_sntp.h>
 #include "config.h"
 #include "pins.h"
 
@@ -67,8 +68,12 @@ bool initNetwork() {
     MDNS.addService("http", "tcp", HTTP_PORT);
     Serial.printf("[net] mDNS registrado: %s.local\n", MDNS_HOSTNAME);
 
+    configTime(0, 0, NTP_SERVER_1, NTP_SERVER_2);
+    Serial.println("[net] NTP iniciado (sincronizacion en segundo plano)");
+
     return true;
 }
+
 
 IPAddress getLocalIP() {
     return s_localIp;
@@ -76,6 +81,15 @@ IPAddress getLocalIP() {
 
 bool isOnline() {
     return s_ethConnected;
+}
+
+bool horaSincronizada() {
+    return time(nullptr) > 1700000000;  // epoch posterior a nov-2023
+}
+
+time_t ahoraUTC() {
+    time_t t = time(nullptr);
+    return (t > 1700000000) ? t : 0;
 }
 
 }  // namespace edge

@@ -1,0 +1,8 @@
+{
+  "name": "edge_logger",
+  "version": "0.1.0",
+  "description": "Tarea FreeRTOS que drena el bus de eventos, mantiene ring buffer en RAM y persiste a SD en batch.",
+  "authors": { "name": "Sistema Auditoria Edge101" },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

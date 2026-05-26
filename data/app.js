@@ -30,11 +30,18 @@ var MOCK_ALERTAS = [
   { hora: "14:18:02", nivel: "WARNING",  mensaje: "Nueva direccion Modbus detectada: esclavo 12" }
 ];
 
-var MOCK_LOGS = [
-  { archivo: "audit/2026-05-19.csv", fecha: "2026-05-19", tamano: "1.2 MB", eventos: 4823 },
-  { archivo: "audit/2026-05-18.csv", fecha: "2026-05-18", tamano: "987 KB", eventos: 3941 },
-  { archivo: "audit/critical.csv",   fecha: "live",       tamano: "12 KB",  eventos: 47 }
+var MOCK_EVENTS = [
+  { utc: 0,          uptime_ms: 12000, source: "ble", detail: "MAC=AA:BB:CC:11:22:33 name=Smartphone rssi=-42" },
+  { utc: 0,          uptime_ms: 8500,  source: "ble", detail: "MAC=DE:AD:BE:EF:00:01 name=Beacon rssi=-68" }
 ];
+
+var MOCK_LOGS = { sd: false, archivos: [] };
+
+function formatearHoraUtc(utc) {
+  if (!utc || utc === 0) return 'sin hora (NTP pendiente)';
+  var d = new Date(utc * 1000);
+  return d.toLocaleString('es-BO', { timeZone: 'America/La_Paz' });
+}
 
 function formatearUptime(segundos) {
   var h = Math.floor(segundos / 3600);
@@ -136,15 +143,56 @@ function rellenarAlertas(items) {
   });
 }
 
-function rellenarLogs(items) {
-  var tbody = document.querySelector('#tabla-logs tbody');
+function rellenarEventos(items) {
+  var tbody = document.querySelector('#tabla-eventos tbody');
   tbody.innerHTML = '';
+  if (items.length === 0) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="3">Sin eventos registrados</td>';
+    tbody.appendChild(tr);
+    return;
+  }
   items.forEach(function(d) {
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + d.archivo + '</td><td>' + d.fecha +
-                   '</td><td>' + d.tamano + '</td><td>' + d.eventos + '</td>';
+    tr.innerHTML = '<td>' + formatearHoraUtc(d.utc) + '</td><td>' + d.source +
+                   '</td><td>' + d.detail + '</td>';
     tbody.appendChild(tr);
   });
+}
+
+function rellenarLogs(data) {
+  var estadoEl = document.getElementById('sd-estado');
+  var tablaEl  = document.getElementById('tabla-logs');
+  if (!data.sd) {
+    estadoEl.classList.remove('oculto');
+    tablaEl.classList.add('oculto');
+    return;
+  }
+  estadoEl.classList.add('oculto');
+  tablaEl.classList.remove('oculto');
+  var tbody = tablaEl.querySelector('tbody');
+  tbody.innerHTML = '';
+  (data.archivos || []).forEach(function(f) {
+    var tr = document.createElement('tr');
+    var kb = (f.bytes / 1024).toFixed(1) + ' KB';
+    var enlace = '<a href="/api/logs/download?file=' + f.nombre + '">descargar</a>';
+    tr.innerHTML = '<td>' + f.nombre + '</td><td>' + kb + '</td><td>' + enlace + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function cargarEventos() {
+  fetch('/api/events')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { rellenarEventos(data); })
+    .catch(function() { rellenarEventos(MOCK_EVENTS); });
+}
+
+function cargarLogs() {
+  fetch('/api/logs')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { rellenarLogs(data); })
+    .catch(function() { rellenarLogs(MOCK_LOGS); });
 }
 
 function mostrarSeccion(nombre) {
@@ -168,10 +216,15 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarBLE();
   setInterval(cargarBLE, 5000);
 
+  cargarEventos();
+  setInterval(cargarEventos, 5000);
+
+  cargarLogs();
+  setInterval(cargarLogs, 15000);
+
   rellenarModbus(MOCK_MODBUS);
   rellenarCAN(MOCK_CAN);
   rellenarAlertas(MOCK_ALERTAS);
-  rellenarLogs(MOCK_LOGS);
 
   mostrarSeccion(leerSeccionDeHash());
   window.addEventListener('hashchange', function() {

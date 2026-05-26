@@ -1,0 +1,8 @@
+{
+  "name": "edge_storage",
+  "version": "0.1.0",
+  "description": "Gestion de microSD para persistencia de logs de auditoria CSV.",
+  "authors": { "name": "Sistema Auditoria Edge101" },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

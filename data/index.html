@@ -71,10 +71,16 @@
       </section>
 
       <section data-seccion="logs" class="oculto">
-        <h2>Archivos de log</h2>
-        <p class="placeholder">Datos simulados -- implementacion en Plan 4.</p>
-        <table id="tabla-logs">
-          <thead><tr><th>Archivo</th><th>Fecha</th><th>Tamano</th><th>Eventos</th></tr></thead>
+        <h2>Registro de auditoria</h2>
+        <h3>Feed de eventos en vivo</h3>
+        <table id="tabla-eventos">
+          <thead><tr><th>Hora</th><th>Fuente</th><th>Detalle</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3>Archivos de auditoria (microSD)</h3>
+        <p id="sd-estado" class="oculto">microSD no presente -- eventos no se persisten</p>
+        <table id="tabla-logs" class="oculto">
+          <thead><tr><th>Archivo</th><th>Tamano</th><th>Descarga</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>

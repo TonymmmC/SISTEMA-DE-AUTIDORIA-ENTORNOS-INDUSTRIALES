@@ -3,6 +3,9 @@
 #include <NimBLEDevice.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+#include "events.h"
+#include "EdgeEventBus.h"
+#include "EdgeNetwork.h"
 
 namespace edge {
 
@@ -38,6 +41,17 @@ static void actualizarOAgregar(const char* mac, const char* nombre, int8_t rssi)
         s_devices[s_count].rssi       = rssi;
         s_devices[s_count].lastSeenMs = ahora;
         s_count++;
+
+        // Evento solo en dispositivo NUEVO (no en re-deteccion).
+        AuditEvent ev;
+        ev.type     = EventType::BLE_DEVICE_FOUND;
+        ev.uptimeMs = ahora;
+        ev.utc      = ahoraUTC();
+        strncpy(ev.source, "ble", sizeof(ev.source) - 1);
+        ev.source[sizeof(ev.source) - 1] = '\0';
+        snprintf(ev.detail, sizeof(ev.detail), "MAC=%s name=%s rssi=%d",
+                 mac, (nombre[0] ? nombre : "-"), (int)rssi);
+        publicarEvento(ev);
     }
 }
 
