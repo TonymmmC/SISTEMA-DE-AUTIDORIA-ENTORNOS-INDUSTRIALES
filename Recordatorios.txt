@@ -1,0 +1,1 @@
+Para el Mod Bus y el CAN ocupamos mas plcs para probar físicamente :(
