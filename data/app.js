@@ -71,15 +71,35 @@ function cargarEstado() {
     .catch(function() { usarMockData(); });
 }
 
+function formatearVisto(ms) {
+  if (ms < 60000)  return 'hace ' + Math.floor(ms / 1000) + 's';
+  if (ms < 3600000) return 'hace ' + Math.floor(ms / 60000) + 'm';
+  return 'hace ' + Math.floor(ms / 3600000) + 'h';
+}
+
 function rellenarBLE(items) {
   var tbody = document.querySelector('#tabla-ble tbody');
   tbody.innerHTML = '';
+  if (items.length === 0) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="4">Sin dispositivos detectados</td>';
+    tbody.appendChild(tr);
+    return;
+  }
   items.forEach(function(d) {
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + d.mac + '</td><td>' + d.nombre +
-                   '</td><td>' + d.rssi + '</td><td>' + d.ultimaVez + '</td>';
+    var visto = d.visto_ms !== undefined ? formatearVisto(d.visto_ms) : (d.ultimaVez || '--');
+    tr.innerHTML = '<td>' + d.mac + '</td><td>' + (d.nombre || '') +
+                   '</td><td>' + d.rssi + ' dBm</td><td>' + visto + '</td>';
     tbody.appendChild(tr);
   });
+}
+
+function cargarBLE() {
+  fetch('/api/ble/devices')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { rellenarBLE(data); })
+    .catch(function() { rellenarBLE(MOCK_BLE); });
 }
 
 function rellenarModbus(items) {
@@ -145,7 +165,9 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarEstado();
   setInterval(cargarEstado, 5000);
 
-  rellenarBLE(MOCK_BLE);
+  cargarBLE();
+  setInterval(cargarBLE, 5000);
+
   rellenarModbus(MOCK_MODBUS);
   rellenarCAN(MOCK_CAN);
   rellenarAlertas(MOCK_ALERTAS);

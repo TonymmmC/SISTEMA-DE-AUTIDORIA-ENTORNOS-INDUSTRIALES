@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include "config.h"
 #include "EdgeNetwork.h"
+#include "EdgeBle.h"
 
 namespace edge {
 
@@ -36,6 +37,26 @@ bool initWebServer() {
         char buf[320];
         serializeJson(doc, buf, sizeof(buf));
         request->send(200, "application/json", buf);
+    });
+
+    s_server.on("/api/ble/devices", HTTP_GET, [](AsyncWebServerRequest* request) {
+        static BleDevice buf[50];
+        size_t n = edge::obtenerDispositivos(buf, 50);
+
+        JsonDocument doc;
+        JsonArray arr = doc.to<JsonArray>();
+        for (size_t i = 0; i < n; i++) {
+            JsonObject d = arr.add<JsonObject>();
+            d["mac"]     = buf[i].mac;
+            d["nombre"]  = buf[i].name;
+            d["rssi"]    = buf[i].rssi;
+            d["visto_ms"] = millis() - buf[i].lastSeenMs;
+        }
+
+        // 50 devices * ~80 bytes = ~4KB + overhead JSON
+        char out[5120];
+        serializeJson(doc, out, sizeof(out));
+        request->send(200, "application/json", out);
     });
 
     s_server.onNotFound([](AsyncWebServerRequest* request) {

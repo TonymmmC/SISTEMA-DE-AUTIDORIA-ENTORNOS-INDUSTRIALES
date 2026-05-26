@@ -3,6 +3,7 @@
 #include "pins.h"
 #include "EdgeNetwork.h"
 #include "EdgeWebServer.h"
+#include "EdgeBle.h"
 
 void setup() {
     // SEGURIDAD HARDWARE: RS485 DE en modo recepcion antes que nada.
@@ -27,6 +28,11 @@ void setup() {
 
     if (!edge::initWebServer()) {
         Serial.println("[boot] FALLO: web server no operativo");
+        return;
+    }
+
+    if (!edge::initBle()) {
+        Serial.println("[boot] FALLO: BLE no operativo");
         return;
     }
 

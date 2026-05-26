@@ -1,0 +1,8 @@
+{
+  "name": "edge_ble",
+  "version": "0.1.0",
+  "description": "Scanner BLE pasivo para auditoría de dispositivos Bluetooth en entornos IIoT.",
+  "authors": { "name": "Sistema Auditoria Edge101" },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}
