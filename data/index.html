@@ -45,6 +45,10 @@
       <a href="#/eventos" data-link class="nav-item">
         <span class="ni">≡</span><span class="nl">Eventos</span>
       </a>
+      <a href="#/alertas" data-link class="nav-item">
+        <span class="ni">⚠</span><span class="nl">Alertas</span>
+        <span class="nav-chip" id="nav-al-chip"></span>
+      </a>
       <a href="#/sistema" data-link class="nav-item">
         <span class="ni">◈</span><span class="nl">Sistema</span>
       </a>
@@ -52,11 +56,13 @@
         <span class="ni">⊟</span><span class="nl">Logs SD</span>
       </a>
       <div class="nav-sep"></div>
-      <a href="#/modbus" data-link class="nav-item nav-dim">
+      <a href="#/modbus" data-link class="nav-item">
         <span class="ni">≈</span><span class="nl">Modbus</span>
+        <span class="nav-chip" id="nav-mb-chip"></span>
       </a>
-      <a href="#/can" data-link class="nav-item nav-dim">
+      <a href="#/can" data-link class="nav-item">
         <span class="ni">⊡</span><span class="nl">CAN</span>
+        <span class="nav-chip" id="nav-can-chip"></span>
       </a>
     </nav>
 
@@ -189,28 +195,55 @@
         </table>
       </section>
 
-      <!-- ── MODBUS ──────────────────────────────────────── -->
-      <section data-sec="modbus" class="oculto">
-        <div class="sec-title" style="margin-bottom:1.25rem">Tráfico Modbus RTU</div>
-        <div class="pending-card">
-          <span class="pending-icon">≈</span>
-          <div>
-            <div class="pending-title">Plan 5 — RS-485 / Modbus RTU</div>
-            <div class="pending-desc">Implementación pendiente. Se mostrará tráfico en tiempo real cuando el módulo RS-485 esté activo.</div>
+      <!-- ── ALERTAS ─────────────────────────────────────── -->
+      <section data-sec="alertas" class="oculto">
+        <div class="sec-hdr">
+          <div class="sec-hdr-left">
+            <span class="sec-title">Alertas de seguridad</span>
+            <span class="count-chip" id="al-chip">0</span>
           </div>
         </div>
+        <ul class="ev-feed ev-feed--full" id="al-feed">
+          <li class="ev-empty">Sin alertas registradas</li>
+        </ul>
+      </section>
+
+      <!-- ── MODBUS ──────────────────────────────────────── -->
+      <section data-sec="modbus" class="oculto">
+        <div class="sec-hdr">
+          <div class="sec-hdr-left">
+            <span class="sec-title">Tráfico Modbus RTU</span>
+            <span class="count-chip" id="mb-chip">0</span>
+            <span class="live-dot" title="escuchando en modo pasivo"></span>
+          </div>
+        </div>
+        <div class="status-banner oculto" id="mb-idle">
+          <span class="sb-dot"></span>
+          Sin tráfico en el bus RS-485 (sniffer pasivo activo)
+        </div>
+        <table id="t-modbus" class="oculto">
+          <thead><tr><th>Visto</th><th>Esclavo</th><th>Función</th><th>Bytes</th><th>CRC</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </section>
 
       <!-- ── CAN ────────────────────────────────────────── -->
       <section data-sec="can" class="oculto">
-        <div class="sec-title" style="margin-bottom:1.25rem">Tráfico CAN Bus</div>
-        <div class="pending-card">
-          <span class="pending-icon">⊡</span>
-          <div>
-            <div class="pending-title">Plan 6 — CAN Bus</div>
-            <div class="pending-desc">Implementación pendiente. Se mostrará tráfico en tiempo real cuando el transceiver CAN esté activo.</div>
+        <div class="sec-hdr">
+          <div class="sec-hdr-left">
+            <span class="sec-title">Tráfico CAN Bus</span>
+            <span class="count-chip" id="can-chip">0</span>
+            <span class="live-dot" title="escuchando en modo listen-only"></span>
           </div>
         </div>
+        <div class="status-banner oculto" id="can-idle">
+          <span class="sb-dot"></span>
+          Sin tráfico en el bus CAN (listener pasivo activo)
+        </div>
+        <table id="t-can" class="oculto">
+          <thead><tr><th>Visto</th><th>ID</th><th>DLC</th><th>Datos</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </section>
 
     </main>

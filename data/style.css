@@ -375,6 +375,8 @@ main section {
 .ev-item--ble    { border-left-color: var(--teal); }
 .ev-item--modbus { border-left-color: var(--warn); }
 .ev-item--can    { border-left-color: var(--accent); }
+.ev-item--warn   { border-left-color: var(--warn); }
+.ev-item--crit   { border-left-color: var(--crit); }
 
 .ev-time {
   font-family: var(--mono);
@@ -398,6 +400,21 @@ main section {
 .ev-src--modbus { background: rgba(245,158,11,.12);  color: var(--warn); }
 .ev-src--can    { background: rgba(74,158,255,.12);  color: var(--accent); }
 .ev-src--other  { background: rgba(255,255,255,.06); color: var(--muted); }
+.ev-src--warn   { background: rgba(245,158,11,.12);  color: var(--warn); }
+.ev-src--crit   { background: rgba(239,68,68,.12);   color: var(--crit); }
+
+/* badges en tablas Modbus / CAN */
+.badge-ok  { color: var(--ok);   font-weight: 700; }
+.badge-err { color: var(--crit); font-weight: 700; }
+.badge-ext {
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: .1rem .3rem;
+  border-radius: 3px;
+  background: rgba(74,158,255,.12);
+  color: var(--accent);
+}
 
 .ev-detail {
   font-family: var(--mono);

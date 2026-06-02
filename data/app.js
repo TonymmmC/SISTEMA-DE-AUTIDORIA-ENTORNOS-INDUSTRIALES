@@ -25,6 +25,23 @@ var MOCK_EVENTS = [
 
 var MOCK_LOGS = { sd: false, archivos: [] };
 
+var MOCK_MODBUS = [
+  { slave: 3,  function: 3, len: 8, crc_ok: true,  visto_ms: 2000  },
+  { slave: 7,  function: 6, len: 8, crc_ok: true,  visto_ms: 14000 },
+  { slave: 12, function: 3, len: 8, crc_ok: false, visto_ms: 60000 }
+];
+
+var MOCK_CAN = [
+  { id: '0x100',      ext: false, dlc: 8, datos: '00 01 A4 B0 02 00 00 00', visto_ms: 1000  },
+  { id: '0x101',      ext: false, dlc: 4, datos: 'FF FF 00 01',             visto_ms: 5000  },
+  { id: '0x18FF50E5', ext: true,  dlc: 8, datos: 'AA BB CC DD EE FF 00 11', visto_ms: 12000 }
+];
+
+var MOCK_ALERTAS = [
+  { utc: 0, nivel: 'WARNING', mensaje: 'Nuevo dispositivo BLE detectado (id 0x1A2B3C)' },
+  { utc: 0, nivel: 'WARNING', mensaje: 'Nueva direccion Modbus detectada: esclavo 12' }
+];
+
 /* ── STATE ──────────────────────────────────────────── */
 
 var state = {
@@ -419,6 +436,120 @@ function fetchLogs() {
     });
 }
 
+/* ── MODBUS ──────────────────────────────────────────── */
+
+function fmtFuncion(fc) {
+  var hex = '0x' + ('0' + fc.toString(16).toUpperCase()).slice(-2);
+  var nombres = { 1:'Read Coils', 2:'Read Inputs', 3:'Read Holding',
+                  4:'Read Input Reg', 5:'Write Coil', 6:'Write Reg',
+                  15:'Write Coils', 16:'Write Regs' };
+  return nombres[fc] ? (hex + ' ' + nombres[fc]) : hex;
+}
+
+function setNavChip(id, n) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = n;
+  el.classList.toggle('visible', n > 0);
+}
+
+function updateModbus(rows) {
+  document.getElementById('mb-chip').textContent = rows.length;
+  setNavChip('nav-mb-chip', rows.length);
+  var idle  = document.getElementById('mb-idle');
+  var tabla = document.getElementById('t-modbus');
+  if (rows.length === 0) {
+    idle.classList.remove('oculto');
+    tabla.classList.add('oculto');
+    return;
+  }
+  idle.classList.add('oculto');
+  tabla.classList.remove('oculto');
+  var tbody = tabla.querySelector('tbody');
+  tbody.innerHTML = '';
+  rows.forEach(function(d) {
+    var crc = d.crc_ok ? '<span class="badge-ok">OK</span>'
+                       : '<span class="badge-err">ERR</span>';
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + fmtVisto(d.visto_ms) + '</td><td>' + d.slave +
+                   '</td><td>' + fmtFuncion(d.function) + '</td><td>' + d.len +
+                   '</td><td>' + crc + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function fetchModbus() {
+  fetch('/api/modbus')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { updateModbus(data); })
+    .catch(function() { if (state.isMock) updateModbus(MOCK_MODBUS); });
+}
+
+/* ── CAN ─────────────────────────────────────────────── */
+
+function updateCan(rows) {
+  document.getElementById('can-chip').textContent = rows.length;
+  setNavChip('nav-can-chip', rows.length);
+  var idle  = document.getElementById('can-idle');
+  var tabla = document.getElementById('t-can');
+  if (rows.length === 0) {
+    idle.classList.remove('oculto');
+    tabla.classList.add('oculto');
+    return;
+  }
+  idle.classList.add('oculto');
+  tabla.classList.remove('oculto');
+  var tbody = tabla.querySelector('tbody');
+  tbody.innerHTML = '';
+  rows.forEach(function(d) {
+    var ext = d.ext ? ' <span class="badge-ext">ext</span>' : '';
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + fmtVisto(d.visto_ms) + '</td><td>' + escHtml(d.id) + ext +
+                   '</td><td>' + d.dlc + '</td><td>' + escHtml(d.datos || '') + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function fetchCan() {
+  fetch('/api/can')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { updateCan(data); })
+    .catch(function() { if (state.isMock) updateCan(MOCK_CAN); });
+}
+
+/* ── ALERTAS ─────────────────────────────────────────── */
+
+function updateAlertas(rows) {
+  document.getElementById('al-chip').textContent = rows.length;
+  setNavChip('nav-al-chip', rows.length);
+  var feed = document.getElementById('al-feed');
+  feed.innerHTML = '';
+  if (rows.length === 0) {
+    var vacio = document.createElement('li');
+    vacio.className = 'ev-empty';
+    vacio.textContent = 'Sin alertas -- ninguna entidad anomala detectada';
+    feed.appendChild(vacio);
+    return;
+  }
+  rows.forEach(function(a) {
+    var li = document.createElement('li');
+    var cls = (a.nivel === 'CRITICAL') ? 'crit' : 'warn';
+    li.className = 'ev-item ev-item--' + cls;
+    li.innerHTML =
+      '<span class="ev-time">' + fmtEvTime(a) + '</span>' +
+      '<span class="ev-src ev-src--' + cls + '">' + escHtml(a.nivel) + '</span>' +
+      '<span class="ev-detail">' + escHtml(a.mensaje) + '</span>';
+    feed.appendChild(li);
+  });
+}
+
+function fetchAlertas() {
+  fetch('/api/alerts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { updateAlertas(data); })
+    .catch(function() { if (state.isMock) updateAlertas(MOCK_ALERTAS); });
+}
+
 /* ── NAVIGATION ──────────────────────────────────────── */
 
 function getSecFromHash() {
@@ -458,12 +589,18 @@ document.addEventListener('DOMContentLoaded', function() {
   fetchBle();
   fetchEvents();
   fetchLogs();
+  fetchModbus();
+  fetchCan();
+  fetchAlertas();
 
   // polling
   setInterval(fetchStatus, 5000);
   setInterval(fetchBle,    5000);
   setInterval(fetchEvents, 5000);
   setInterval(fetchLogs,   15000);
+  setInterval(fetchModbus, 5000);
+  setInterval(fetchCan,    5000);
+  setInterval(fetchAlertas, 5000);
 
   // update "updated X ago" label in BLE section
   setInterval(function() {
