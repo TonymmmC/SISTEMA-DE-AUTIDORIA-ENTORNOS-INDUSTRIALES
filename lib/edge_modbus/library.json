@@ -1,0 +1,8 @@
+{
+  "name": "edge_modbus",
+  "version": "0.1.0",
+  "description": "Sniffer pasivo Modbus RTU (listen-only) sobre RS485 para auditoria de buses industriales.",
+  "authors": { "name": "Sistema Auditoria Edge101" },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

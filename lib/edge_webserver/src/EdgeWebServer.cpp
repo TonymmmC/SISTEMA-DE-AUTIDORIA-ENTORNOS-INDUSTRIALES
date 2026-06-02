@@ -7,6 +7,7 @@
 #include "config.h"
 #include "EdgeNetwork.h"
 #include "EdgeBle.h"
+#include "EdgeModbus.h"
 #include "EdgeLogger.h"
 #include "EdgeStorage.h"
 
@@ -59,6 +60,25 @@ bool initWebServer() {
         // 50 devices * ~80 bytes = ~4KB + overhead JSON.
         // Estatico: los handlers async corren serializados en async_tcp.
         static char out[5120];
+        serializeJson(doc, out, sizeof(out));
+        request->send(200, "application/json", out);
+    });
+
+    s_server.on("/api/modbus", HTTP_GET, [](AsyncWebServerRequest* request) {
+        static ModbusFrame buf[20];
+        size_t n = edge::obtenerTramasModbus(buf, 20);
+
+        JsonDocument doc;
+        JsonArray arr = doc.to<JsonArray>();
+        for (size_t i = 0; i < n; i++) {
+            JsonObject f = arr.add<JsonObject>();
+            f["slave"]    = buf[i].slave;
+            f["function"] = buf[i].function;
+            f["len"]      = buf[i].len;
+            f["crc_ok"]   = buf[i].crcValido;
+            f["visto_ms"] = millis() - buf[i].lastSeenMs;
+        }
+        static char out[2048];
         serializeJson(doc, out, sizeof(out));
         request->send(200, "application/json", out);
     });

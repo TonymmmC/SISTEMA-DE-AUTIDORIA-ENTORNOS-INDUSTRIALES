@@ -7,6 +7,7 @@
 #include "EdgeLogger.h"
 #include "EdgeWebServer.h"
 #include "EdgeBle.h"
+#include "EdgeModbus.h"
 
 void setup() {
     // SEGURIDAD HARDWARE: RS485 DE en modo recepcion antes que nada.
@@ -49,6 +50,11 @@ void setup() {
 
     if (!edge::initBle()) {
         Serial.println("[boot] FALLO: BLE no operativo");
+        return;
+    }
+
+    if (!edge::initModbus()) {
+        Serial.println("[boot] FALLO: Modbus sniffer no operativo");
         return;
     }
 

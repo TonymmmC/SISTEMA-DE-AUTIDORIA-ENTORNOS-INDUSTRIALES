@@ -34,3 +34,6 @@ jobs:
 
       - name: Compilar firmware
         run: pio run -e edge101
+
+      - name: Tests unitarios (funciones puras)
+        run: pio test -e native

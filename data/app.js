@@ -14,9 +14,9 @@ var MOCK_BLE = [
 ];
 
 var MOCK_MODBUS = [
-  { hora: "14:23:01", esclavo: 3,  funcion: "0x03 Read",  registro: "40001", datos: "0x00A4" },
-  { hora: "14:23:01", esclavo: 7,  funcion: "0x06 Write", registro: "40010", datos: "0x0100" },
-  { hora: "14:23:02", esclavo: 12, funcion: "0x03 Read",  registro: "40005", datos: "0x12FA" }
+  { slave: 3,  function: 3, len: 8, crc_ok: true,  visto_ms: 2000 },
+  { slave: 7,  function: 6, len: 8, crc_ok: true,  visto_ms: 14000 },
+  { slave: 12, function: 3, len: 8, crc_ok: false, visto_ms: 60000 }
 ];
 
 var MOCK_CAN = [
@@ -109,16 +109,38 @@ function cargarBLE() {
     .catch(function() { rellenarBLE(MOCK_BLE); });
 }
 
+function formatearFuncion(fc) {
+  var hex = '0x' + ('0' + fc.toString(16).toUpperCase()).slice(-2);
+  var nombres = { 1: 'Read Coils', 2: 'Read Inputs', 3: 'Read Holding',
+                  4: 'Read Input Reg', 5: 'Write Coil', 6: 'Write Reg',
+                  15: 'Write Coils', 16: 'Write Regs' };
+  return nombres[fc] ? (hex + ' ' + nombres[fc]) : hex;
+}
+
 function rellenarModbus(items) {
   var tbody = document.querySelector('#tabla-modbus tbody');
   tbody.innerHTML = '';
-  items.forEach(function(d) {
+  if (items.length === 0) {
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + d.hora + '</td><td>' + d.esclavo +
-                   '</td><td>' + d.funcion + '</td><td>' + d.registro +
-                   '</td><td>' + d.datos + '</td>';
+    tr.innerHTML = '<td colspan="5">Sin trafico en el bus RS485</td>';
     tbody.appendChild(tr);
+    return;
+  }
+  items.forEach(function(d) {
+    var fila = document.createElement('tr');
+    var crc = d.crc_ok ? 'OK' : 'ERR';
+    fila.innerHTML = '<td>' + formatearVisto(d.visto_ms) + '</td><td>' + d.slave +
+                     '</td><td>' + formatearFuncion(d.function) + '</td><td>' + d.len +
+                     '</td><td>' + crc + '</td>';
+    tbody.appendChild(fila);
   });
+}
+
+function cargarModbus() {
+  fetch('/api/modbus')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { rellenarModbus(data); })
+    .catch(function() { rellenarModbus(MOCK_MODBUS); });
 }
 
 function rellenarCAN(items) {
@@ -222,7 +244,9 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarLogs();
   setInterval(cargarLogs, 15000);
 
-  rellenarModbus(MOCK_MODBUS);
+  cargarModbus();
+  setInterval(cargarModbus, 5000);
+
   rellenarCAN(MOCK_CAN);
   rellenarAlertas(MOCK_ALERTAS);
 
