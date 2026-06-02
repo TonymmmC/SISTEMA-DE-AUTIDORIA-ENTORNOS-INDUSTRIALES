@@ -3,92 +3,222 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema Auditoria Edge101</title>
+  <title>Edge101 Auditor</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header>
-    <h1>Sistema Auditoria Edge101</h1>
-    <span id="modo-local" class="oculto">modo desarrollo local -- data simulada</span>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/>
+        <circle cx="12" cy="12" r="2.5"/>
+        <line x1="12" y1="2" x2="12" y2="9.5"/>
+        <line x1="12" y1="14.5" x2="12" y2="22"/>
+        <line x1="2" y1="8.5" x2="9.5" y2="12"/>
+        <line x1="14.5" y1="12" x2="22" y2="8.5"/>
+        <line x1="2" y1="15.5" x2="9.5" y2="12"/>
+        <line x1="14.5" y1="12" x2="22" y2="15.5"/>
+      </svg>
+      <div>
+        <div class="brand-name">Edge101 Auditor</div>
+        <div class="brand-ip" id="header-ip">--</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="modo-local" class="mock-badge oculto">modo local</span>
+      <div class="conn-wrap">
+        <span class="conn-dot" id="conn-dot"></span>
+        <span class="conn-text" id="conn-text">conectando</span>
+      </div>
+    </div>
   </header>
 
   <div class="layout">
     <nav class="sidebar">
-      <ul>
-        <li><a href="#/sistema" data-link>Sistema</a></li>
-        <li><a href="#/ble" data-link>BLE</a></li>
-        <li><a href="#/modbus" data-link>Modbus</a></li>
-        <li><a href="#/can" data-link>CAN</a></li>
-        <li><a href="#/alertas" data-link>Alertas</a></li>
-        <li><a href="#/logs" data-link>Logs</a></li>
-      </ul>
+      <a href="#/overview" data-link class="nav-item">
+        <span class="ni">⊞</span><span class="nl">Overview</span>
+      </a>
+      <a href="#/ble" data-link class="nav-item">
+        <span class="ni">◎</span><span class="nl">BLE</span>
+        <span class="nav-chip" id="nav-ble-chip"></span>
+      </a>
+      <a href="#/eventos" data-link class="nav-item">
+        <span class="ni">≡</span><span class="nl">Eventos</span>
+      </a>
+      <a href="#/sistema" data-link class="nav-item">
+        <span class="ni">◈</span><span class="nl">Sistema</span>
+      </a>
+      <a href="#/logs" data-link class="nav-item">
+        <span class="ni">⊟</span><span class="nl">Logs SD</span>
+      </a>
+      <div class="nav-sep"></div>
+      <a href="#/modbus" data-link class="nav-item nav-dim">
+        <span class="ni">≈</span><span class="nl">Modbus</span>
+      </a>
+      <a href="#/can" data-link class="nav-item nav-dim">
+        <span class="ni">⊡</span><span class="nl">CAN</span>
+      </a>
     </nav>
 
-    <main>
-      <section data-seccion="sistema">
-        <h2>Estado del sistema</h2>
-        <dl>
-          <dt>Dispositivo</dt>      <dd id="device">--</dd>
-          <dt>Version firmware</dt> <dd id="version">--</dd>
-          <dt>Build</dt>            <dd id="build">--</dd>
-          <dt>Uptime</dt>           <dd id="uptime">--</dd>
-          <dt>IP</dt>               <dd id="ip">--</dd>
-          <dt>Heap libre</dt>       <dd id="heap">--</dd>
-        </dl>
-        <p class="indicador" id="indicador">Cargando...</p>
+    <main id="main">
+
+      <!-- ── OVERVIEW ─────────────────────────────────────── -->
+      <section data-sec="overview">
+        <div class="kpi-row">
+          <div class="kpi-card kpi-card--ble">
+            <div class="kpi-val" id="k-ble-activos">--</div>
+            <div class="kpi-lbl">BLE activos</div>
+            <div class="kpi-sub">últimos 2 min</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-val" id="k-ble-total">--</div>
+            <div class="kpi-lbl">Detectados (sesión)</div>
+            <div class="kpi-sub">MACs únicas vistas</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-val" id="k-eventos">--</div>
+            <div class="kpi-lbl">Eventos capturados</div>
+            <div class="kpi-sub">en buffer</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-val" id="k-heap">--</div>
+            <div class="kpi-lbl">Heap libre</div>
+            <div class="micro-bar-track"><div class="micro-bar-fill" id="k-heap-bar"></div></div>
+          </div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-lbl">Dispositivos BLE en el tiempo <span class="chart-sub" id="sp-range"></span></div>
+            <svg class="sparkline" id="sp-ble" viewBox="0 0 300 52" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sp-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path id="sp-area" fill="url(#sp-grad)"/>
+              <path id="sp-line" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="chart-card">
+            <div class="chart-lbl">Distribución de señal</div>
+            <div class="rssi-dist" id="rssi-dist">
+              <div class="rssi-empty">Sin datos BLE</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feed-title">Eventos recientes</div>
+        <ul class="ev-feed" id="mini-feed"></ul>
       </section>
 
-      <section data-seccion="ble" class="oculto">
-        <h2>Dispositivos Bluetooth</h2>
-        <table id="tabla-ble">
-          <thead><tr><th>MAC</th><th>Nombre</th><th>RSSI</th><th>Visto</th></tr></thead>
+      <!-- ── BLE ─────────────────────────────────────────── -->
+      <section data-sec="ble" class="oculto">
+        <div class="sec-hdr">
+          <div class="sec-hdr-left">
+            <span class="sec-title">Dispositivos Bluetooth</span>
+            <span class="count-chip" id="ble-chip">0</span>
+            <span class="live-dot" title="escaneando"></span>
+          </div>
+          <span class="update-ts" id="ble-ts"></span>
+        </div>
+        <div class="dev-list" id="dev-list">
+          <div class="empty-state">Esperando datos del scanner...</div>
+        </div>
+      </section>
+
+      <!-- ── EVENTOS ─────────────────────────────────────── -->
+      <section data-sec="eventos" class="oculto">
+        <div class="sec-hdr">
+          <span class="sec-title">Feed de auditoría</span>
+          <span class="count-chip" id="ev-chip">0</span>
+        </div>
+        <ul class="ev-feed ev-feed--full" id="ev-feed">
+          <li class="ev-empty">Sin eventos registrados</li>
+        </ul>
+      </section>
+
+      <!-- ── SISTEMA ─────────────────────────────────────── -->
+      <section data-sec="sistema" class="oculto">
+        <div class="sec-title" style="margin-bottom:1.25rem">Estado del sistema</div>
+        <div class="sys-grid">
+          <div class="sys-tile">
+            <div class="sys-lbl">Dispositivo</div>
+            <div class="sys-val" id="s-device">--</div>
+          </div>
+          <div class="sys-tile">
+            <div class="sys-lbl">Firmware</div>
+            <div class="sys-val" id="s-version">--</div>
+          </div>
+          <div class="sys-tile">
+            <div class="sys-lbl">Build</div>
+            <div class="sys-val" id="s-build">--</div>
+          </div>
+          <div class="sys-tile">
+            <div class="sys-lbl">Dirección IP</div>
+            <div class="sys-val" id="s-ip">--</div>
+          </div>
+          <div class="sys-tile sys-tile--span2">
+            <div class="sys-lbl">Uptime</div>
+            <div class="sys-val sys-val--xl" id="s-uptime">--</div>
+          </div>
+          <div class="sys-tile sys-tile--span2">
+            <div class="sys-lbl">Heap libre</div>
+            <div style="display:flex;align-items:baseline;gap:.5rem">
+              <div class="sys-val" id="s-heap">--</div>
+              <div class="sys-sub" id="s-heap-pct"></div>
+            </div>
+            <div class="micro-bar-track" style="margin-top:.625rem">
+              <div class="micro-bar-fill" id="s-heap-bar"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── LOGS SD ─────────────────────────────────────── -->
+      <section data-sec="logs" class="oculto">
+        <div class="sec-title" style="margin-bottom:1.25rem">Archivos de auditoría — microSD</div>
+        <div class="status-banner status-banner--warn oculto" id="sd-missing">
+          <span class="sb-dot"></span>
+          microSD no presente — los eventos no se persisten en disco
+        </div>
+        <table id="t-logs" class="oculto">
+          <thead><tr><th>Archivo</th><th>Tamaño</th><th>Descarga</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>
 
-      <section data-seccion="modbus" class="oculto">
-        <h2>Trafico Modbus RTU</h2>
-        <p class="placeholder">Datos simulados -- implementacion en Plan 5.</p>
-        <table id="tabla-modbus">
-          <thead><tr><th>Hora</th><th>Esclavo</th><th>Funcion</th><th>Registro</th><th>Datos</th></tr></thead>
-          <tbody></tbody>
-        </table>
+      <!-- ── MODBUS ──────────────────────────────────────── -->
+      <section data-sec="modbus" class="oculto">
+        <div class="sec-title" style="margin-bottom:1.25rem">Tráfico Modbus RTU</div>
+        <div class="pending-card">
+          <span class="pending-icon">≈</span>
+          <div>
+            <div class="pending-title">Plan 5 — RS-485 / Modbus RTU</div>
+            <div class="pending-desc">Implementación pendiente. Se mostrará tráfico en tiempo real cuando el módulo RS-485 esté activo.</div>
+          </div>
+        </div>
       </section>
 
-      <section data-seccion="can" class="oculto">
-        <h2>Trafico CAN Bus</h2>
-        <p class="placeholder">Datos simulados -- implementacion en Plan 6.</p>
-        <table id="tabla-can">
-          <thead><tr><th>Hora</th><th>ID</th><th>DLC</th><th>Datos</th></tr></thead>
-          <tbody></tbody>
-        </table>
+      <!-- ── CAN ────────────────────────────────────────── -->
+      <section data-sec="can" class="oculto">
+        <div class="sec-title" style="margin-bottom:1.25rem">Tráfico CAN Bus</div>
+        <div class="pending-card">
+          <span class="pending-icon">⊡</span>
+          <div>
+            <div class="pending-title">Plan 6 — CAN Bus</div>
+            <div class="pending-desc">Implementación pendiente. Se mostrará tráfico en tiempo real cuando el transceiver CAN esté activo.</div>
+          </div>
+        </div>
       </section>
 
-      <section data-seccion="alertas" class="oculto">
-        <h2>Alertas activas</h2>
-        <p class="placeholder">Datos simulados -- implementacion en Plan 7.</p>
-        <ul id="lista-alertas"></ul>
-      </section>
-
-      <section data-seccion="logs" class="oculto">
-        <h2>Registro de auditoria</h2>
-        <h3>Feed de eventos en vivo</h3>
-        <table id="tabla-eventos">
-          <thead><tr><th>Hora</th><th>Fuente</th><th>Detalle</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <h3>Archivos de auditoria (microSD)</h3>
-        <p id="sd-estado" class="oculto">microSD no presente -- eventos no se persisten</p>
-        <table id="tabla-logs" class="oculto">
-          <thead><tr><th>Archivo</th><th>Tamano</th><th>Descarga</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </section>
     </main>
   </div>
 
-  <footer>
-    <p>Sistema Auditoria Edge101 -- Monitoreo de seguridad IIoT</p>
+  <footer class="footer">
+    <span>Sistema Auditoria Edge101 &mdash; IIoT Security Monitor</span>
+    <span id="footer-up" class="footer-up"></span>
   </footer>
 
   <script src="/app.js"></script>
