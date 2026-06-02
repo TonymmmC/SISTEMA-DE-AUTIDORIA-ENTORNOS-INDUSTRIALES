@@ -8,6 +8,7 @@
 #include "events.h"
 #include "EdgeEventBus.h"
 #include "EdgeNetwork.h"
+#include "EdgeAlerts.h"
 
 namespace edge {
 
@@ -49,6 +50,7 @@ static void procesarMensaje(const twai_message_t& msg) {
     for (uint8_t i = 0; i < f.dlc; i++) f.data[i] = msg.data[i];
     agregarAlRing(f);
     emitirEvento(f);
+    notificarEntidad("can", f.id);
 }
 
 // ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@
 #include "events.h"
 #include "EdgeEventBus.h"
 #include "EdgeNetwork.h"
+#include "EdgeAlerts.h"
 
 namespace edge {
 
@@ -52,6 +53,7 @@ static void procesarTrama(const uint8_t* buf, size_t len) {
     f.lastSeenMs = millis();
     agregarAlRing(f);
     emitirEvento(f);
+    notificarEntidad("modbus", f.slave);
 }
 
 // ---------------------------------------------------------------------------

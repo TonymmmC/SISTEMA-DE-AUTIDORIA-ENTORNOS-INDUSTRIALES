@@ -26,8 +26,8 @@ var MOCK_CAN = [
 ];
 
 var MOCK_ALERTAS = [
-  { hora: "14:21:33", nivel: "CRITICAL", mensaje: "Dispositivo BLE no autorizado: DE:AD:BE:EF:00:01" },
-  { hora: "14:18:02", nivel: "WARNING",  mensaje: "Nueva direccion Modbus detectada: esclavo 12" }
+  { utc: 0, nivel: "WARNING", mensaje: "Nuevo dispositivo BLE detectado (id 0x1A2B3C)" },
+  { utc: 0, nivel: "WARNING", mensaje: "Nueva direccion Modbus detectada: esclavo 12" }
 ];
 
 var MOCK_EVENTS = [
@@ -38,7 +38,7 @@ var MOCK_EVENTS = [
 var MOCK_LOGS = { sd: false, archivos: [] };
 
 var MOCK_STATS = {
-  ble: 3, modbus: 3, modbus_valid: 2, can: 3, eventos: 5,
+  ble: 3, modbus: 3, modbus_valid: 2, can: 3, alertas: 2, eventos: 5,
   ntp: false, sd: false, heap: 215840, heap_min: 198400, uptime_s: 3725
 };
 
@@ -64,6 +64,9 @@ function rellenarStats(s) {
   document.getElementById('stat-modbus').textContent  = s.modbus;
   document.getElementById('stat-can').textContent     = s.can || 0;
   document.getElementById('stat-eventos').textContent = s.eventos;
+  var alEl = document.getElementById('stat-alertas');
+  alEl.textContent = s.alertas || 0;
+  alEl.classList.toggle('activa', (s.alertas || 0) > 0);
   document.getElementById('stat-heap').textContent    = formatearBytes(s.heap || 0);
   document.getElementById('heap-min').textContent     = formatearBytes(s.heap_min || 0);
   var ntpEl = document.getElementById('ntp');
@@ -217,12 +220,26 @@ function cargarCAN() {
 function rellenarAlertas(items) {
   var ul = document.getElementById('lista-alertas');
   ul.innerHTML = '';
+  if (items.length === 0) {
+    var vacio = document.createElement('li');
+    vacio.className = 'alerta-ok';
+    vacio.textContent = 'Sin alertas -- ninguna entidad anomala detectada';
+    ul.appendChild(vacio);
+    return;
+  }
   items.forEach(function(d) {
     var li = document.createElement('li');
     li.className = 'alerta-' + d.nivel.toLowerCase();
-    li.textContent = '[' + d.hora + '] ' + d.nivel + ': ' + d.mensaje;
+    li.textContent = '[' + formatearHoraUtc(d.utc) + '] ' + d.nivel + ': ' + d.mensaje;
     ul.appendChild(li);
   });
+}
+
+function cargarAlertas() {
+  fetch('/api/alerts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { rellenarAlertas(data); })
+    .catch(function() { rellenarAlertas(MOCK_ALERTAS); });
 }
 
 function rellenarEventos(items) {
@@ -317,7 +334,8 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarCAN();
   setInterval(cargarCAN, 5000);
 
-  rellenarAlertas(MOCK_ALERTAS);
+  cargarAlertas();
+  setInterval(cargarAlertas, 5000);
 
   mostrarSeccion(leerSeccionDeHash());
   window.addEventListener('hashchange', function() {

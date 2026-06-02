@@ -9,6 +9,7 @@
 #include "EdgeBle.h"
 #include "EdgeModbus.h"
 #include "EdgeCan.h"
+#include "EdgeAlerts.h"
 #include "EdgeLogger.h"
 #include "EdgeStorage.h"
 #include "EdgeHousekeeping.h"
@@ -17,6 +18,12 @@
 namespace edge {
 
 static AsyncWebServer s_server(HTTP_PORT);
+
+// Buffer de salida JSON compartido por todos los handlers. Los callbacks de
+// ESPAsyncWebServer corren serializados en el task async_tcp (uno a la vez),
+// asi que un unico buffer estatico es seguro y ahorra DRAM frente a tener uno
+// por endpoint. Dimensionado al peor caso (/api/events con 64 eventos).
+static char s_out[9216];
 
 bool initWebServer() {
     if (!LittleFS.begin(false)) {
@@ -51,10 +58,12 @@ bool initWebServer() {
         static ModbusFrame mbBuf[20];
         static CanFrame    canBuf[20];
         static AuditEvent  evBuf[64];
+        static AlertEntry  alBuf[32];
         size_t nBle = edge::obtenerDispositivos(bleBuf, 50);
         size_t nMb  = edge::obtenerTramasModbus(mbBuf, 20);
         size_t nCan = edge::obtenerTramasCan(canBuf, 20);
         size_t nEv  = edge::obtenerEventosRecientes(evBuf, 64);
+        size_t nAl  = edge::obtenerAlertas(alBuf, 32);
         size_t mbValid = 0;
         for (size_t i = 0; i < nMb; i++) if (mbBuf[i].crcValido) mbValid++;
 
@@ -63,15 +72,15 @@ bool initWebServer() {
         doc["modbus"]       = nMb;
         doc["modbus_valid"] = mbValid;
         doc["can"]          = nCan;
+        doc["alertas"]      = nAl;
         doc["eventos"]      = nEv;
         doc["ntp"]          = edge::horaSincronizada();
         doc["sd"]           = edge::sdDisponible();
         doc["heap"]         = edge::heapLibre();
         doc["heap_min"]     = edge::heapMinimo();
         doc["uptime_s"]     = millis() / 1000;
-        static char out[384];
-        serializeJson(doc, out, sizeof(out));
-        request->send(200, "application/json", out);
+        serializeJson(doc, s_out, sizeof(s_out));
+        request->send(200, "application/json", s_out);
     });
 
     s_server.on("/api/ble/devices", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -88,11 +97,8 @@ bool initWebServer() {
             d["visto_ms"] = millis() - buf[i].lastSeenMs;
         }
 
-        // 50 devices * ~80 bytes = ~4KB + overhead JSON.
-        // Estatico: los handlers async corren serializados en async_tcp.
-        static char out[5120];
-        serializeJson(doc, out, sizeof(out));
-        request->send(200, "application/json", out);
+        serializeJson(doc, s_out, sizeof(s_out));
+        request->send(200, "application/json", s_out);
     });
 
     s_server.on("/api/modbus", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -109,9 +115,8 @@ bool initWebServer() {
             f["crc_ok"]   = buf[i].crcValido;
             f["visto_ms"] = millis() - buf[i].lastSeenMs;
         }
-        static char out[2048];
-        serializeJson(doc, out, sizeof(out));
-        request->send(200, "application/json", out);
+        serializeJson(doc, s_out, sizeof(s_out));
+        request->send(200, "application/json", s_out);
     });
 
     s_server.on("/api/can", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -135,9 +140,24 @@ bool initWebServer() {
             f["datos"]    = datos;
             f["visto_ms"] = millis() - buf[i].lastSeenMs;
         }
-        static char out[3072];
-        serializeJson(doc, out, sizeof(out));
-        request->send(200, "application/json", out);
+        serializeJson(doc, s_out, sizeof(s_out));
+        request->send(200, "application/json", s_out);
+    });
+
+    s_server.on("/api/alerts", HTTP_GET, [](AsyncWebServerRequest* request) {
+        static AlertEntry buf[32];
+        size_t n = edge::obtenerAlertas(buf, 32);
+
+        JsonDocument doc;
+        JsonArray arr = doc.to<JsonArray>();
+        for (size_t i = 0; i < n; i++) {
+            JsonObject a = arr.add<JsonObject>();
+            a["utc"]     = (uint32_t)buf[i].utc;
+            a["nivel"]   = buf[i].nivel;
+            a["mensaje"] = buf[i].mensaje;
+        }
+        serializeJson(doc, s_out, sizeof(s_out));
+        request->send(200, "application/json", s_out);
     });
 
     s_server.on("/api/events", HTTP_GET, [](AsyncWebServerRequest* req) {
@@ -153,11 +173,8 @@ bool initWebServer() {
             e["source"]    = buf[i].source;
             e["detail"]    = buf[i].detail;
         }
-        // Peor caso 64 eventos con detail lleno ~8.8KB. Estatico para no
-        // cargar el stack del task async y evitar truncado de serializeJson.
-        static char out[9216];
-        serializeJson(doc, out, sizeof(out));
-        req->send(200, "application/json", out);
+        serializeJson(doc, s_out, sizeof(s_out));
+        req->send(200, "application/json", s_out);
     });
 
     s_server.on("/api/logs", HTTP_GET, [](AsyncWebServerRequest* req) {
@@ -166,9 +183,8 @@ bool initWebServer() {
             doc["sd"] = false;
             JsonArray arr = doc["archivos"].to<JsonArray>();
             (void)arr;
-            static char out[64];
-            serializeJson(doc, out, sizeof(out));
-            req->send(200, "application/json", out);
+            serializeJson(doc, s_out, sizeof(s_out));
+            req->send(200, "application/json", s_out);
             return;
         }
 
@@ -191,9 +207,8 @@ bool initWebServer() {
             f["nombre"] = s_files[i].nombre;
             f["bytes"]  = (uint32_t)s_files[i].bytes;
         }
-        static char out[2048];
-        serializeJson(doc, out, sizeof(out));
-        req->send(200, "application/json", out);
+        serializeJson(doc, s_out, sizeof(s_out));
+        req->send(200, "application/json", s_out);
     });
 
     s_server.on("/api/logs/download", HTTP_GET, [](AsyncWebServerRequest* req) {

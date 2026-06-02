@@ -6,6 +6,7 @@
 #include "events.h"
 #include "EdgeEventBus.h"
 #include "EdgeNetwork.h"
+#include "EdgeAlerts.h"
 
 namespace edge {
 
@@ -52,6 +53,7 @@ static void actualizarOAgregar(const char* mac, const char* nombre, int8_t rssi)
         snprintf(ev.detail, sizeof(ev.detail), "MAC=%s name=%s rssi=%d",
                  mac, (nombre[0] ? nombre : "-"), (int)rssi);
         publicarEvento(ev);
+        notificarEntidad("ble", hashCadena(mac));
     }
 }
 

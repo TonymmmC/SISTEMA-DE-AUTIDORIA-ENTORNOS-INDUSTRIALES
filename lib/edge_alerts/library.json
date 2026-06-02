@@ -1,0 +1,8 @@
+{
+  "name": "edge_alerts",
+  "version": "0.1.0",
+  "description": "Motor de alertas: detecta entidades nuevas en los buses auditados (BLE, Modbus, CAN).",
+  "authors": { "name": "Sistema Auditoria Edge101" },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

@@ -9,6 +9,7 @@
 #include "EdgeBle.h"
 #include "EdgeModbus.h"
 #include "EdgeCan.h"
+#include "EdgeAlerts.h"
 #include "EdgeHousekeeping.h"
 
 void setup() {
@@ -44,6 +45,9 @@ void setup() {
         Serial.println("[boot] FALLO: logger no operativo");
         return;
     }
+
+    // Alertas: no critico. Si falla, la captura sigue sin generar alertas.
+    edge::initAlerts();
 
     if (!edge::initWebServer()) {
         Serial.println("[boot] FALLO: web server no operativo");
