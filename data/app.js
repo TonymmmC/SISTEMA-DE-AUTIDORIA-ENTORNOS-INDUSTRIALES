@@ -37,6 +37,49 @@ var MOCK_EVENTS = [
 
 var MOCK_LOGS = { sd: false, archivos: [] };
 
+var MOCK_STATS = {
+  ble: 3, modbus: 3, modbus_valid: 2, eventos: 5,
+  ntp: false, sd: false, heap: 215840, heap_min: 198400, uptime_s: 3725
+};
+
+function badge(texto, clase) {
+  return '<span class="badge ' + clase + '">' + texto + '</span>';
+}
+
+function actualizarConexion(ok) {
+  var dot = document.getElementById('conexion-dot');
+  var txt = document.getElementById('conexion-texto');
+  if (!dot || !txt) return;
+  dot.className = 'dot ' + (ok ? 'dot-ok' : 'dot-err');
+  txt.textContent = ok ? 'en linea' : 'sin conexion';
+}
+
+function tickReloj() {
+  var el = document.getElementById('reloj');
+  if (el) el.textContent = new Date().toLocaleTimeString('es-BO');
+}
+
+function rellenarStats(s) {
+  document.getElementById('stat-ble').textContent     = s.ble;
+  document.getElementById('stat-modbus').textContent  = s.modbus;
+  document.getElementById('stat-eventos').textContent = s.eventos;
+  document.getElementById('stat-heap').textContent    = formatearBytes(s.heap || 0);
+  document.getElementById('heap-min').textContent     = formatearBytes(s.heap_min || 0);
+  var ntpEl = document.getElementById('ntp');
+  ntpEl.innerHTML = s.ntp ? badge('sincronizada', 'badge-ok')
+                          : badge('NTP pendiente', 'badge-warn');
+  var sdEl = document.getElementById('sd');
+  sdEl.innerHTML = s.sd ? badge('presente', 'badge-ok')
+                        : badge('no presente', 'badge-off');
+}
+
+function cargarStats() {
+  fetch('/api/stats')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { actualizarConexion(true); rellenarStats(data); })
+    .catch(function() { actualizarConexion(false); rellenarStats(MOCK_STATS); });
+}
+
 function formatearHoraUtc(utc) {
   if (!utc || utc === 0) return 'sin hora (NTP pendiente)';
   var d = new Date(utc * 1000);
@@ -96,8 +139,10 @@ function rellenarBLE(items) {
   items.forEach(function(d) {
     var tr = document.createElement('tr');
     var visto = d.visto_ms !== undefined ? formatearVisto(d.visto_ms) : (d.ultimaVez || '--');
+    var clase = d.rssi > -60 ? 'badge-ok' : (d.rssi > -75 ? 'badge-warn' : 'badge-err');
+    var rssi = badge(d.rssi + ' dBm', clase);
     tr.innerHTML = '<td>' + d.mac + '</td><td>' + (d.nombre || '') +
-                   '</td><td>' + d.rssi + ' dBm</td><td>' + visto + '</td>';
+                   '</td><td>' + rssi + '</td><td>' + visto + '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -128,7 +173,7 @@ function rellenarModbus(items) {
   }
   items.forEach(function(d) {
     var fila = document.createElement('tr');
-    var crc = d.crc_ok ? 'OK' : 'ERR';
+    var crc = d.crc_ok ? badge('OK', 'badge-ok') : badge('ERR', 'badge-err');
     fila.innerHTML = '<td>' + formatearVisto(d.visto_ms) + '</td><td>' + d.slave +
                      '</td><td>' + formatearFuncion(d.function) + '</td><td>' + d.len +
                      '</td><td>' + crc + '</td>';
@@ -176,7 +221,8 @@ function rellenarEventos(items) {
   }
   items.forEach(function(d) {
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + formatearHoraUtc(d.utc) + '</td><td>' + d.source +
+    var clase = d.source === 'modbus' ? 'badge-modbus' : (d.source === 'can' ? 'badge-can' : 'badge-ble');
+    tr.innerHTML = '<td>' + formatearHoraUtc(d.utc) + '</td><td>' + badge(d.source, clase) +
                    '</td><td>' + d.detail + '</td>';
     tbody.appendChild(tr);
   });
@@ -232,6 +278,12 @@ function leerSeccionDeHash() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  tickReloj();
+  setInterval(tickReloj, 1000);
+
+  cargarStats();
+  setInterval(cargarStats, 5000);
+
   cargarEstado();
   setInterval(cargarEstado, 5000);
 

@@ -1,0 +1,8 @@
+{
+  "name": "edge_housekeeping",
+  "version": "0.1.0",
+  "description": "Tarea de mantenimiento: monitor de heap y deteccion de tendencia descendente (leaks).",
+  "authors": { "name": "Sistema Auditoria Edge101" },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

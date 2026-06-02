@@ -37,6 +37,47 @@ header h1 {
   color: var(--accent);
 }
 
+.header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.header-estado {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-family: 'Courier New', monospace;
+}
+
+.header-estado .sep { opacity: 0.4; }
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  display: inline-block;
+}
+
+.dot-ok {
+  background: var(--ok);
+  box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.6);
+  animation: pulso 2s infinite;
+}
+
+.dot-err { background: var(--error); }
+
+@keyframes pulso {
+  0%   { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
 .subtitulo {
   color: var(--text-muted);
   font-size: 0.9rem;
@@ -102,6 +143,64 @@ main section h2 {
   letter-spacing: 0.08em;
   color: var(--text-muted);
 }
+
+main section h2.mt { margin-top: 2rem; }
+
+/* --- cards de resumen --- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: border-color 0.15s;
+}
+
+.card:hover { border-color: var(--accent); }
+
+.card-valor {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+
+.card-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* --- badges --- */
+
+.badge {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: system-ui, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.badge-ok    { background: rgba(76, 175, 80, 0.15);  color: var(--ok);      border: 1px solid rgba(76, 175, 80, 0.3); }
+.badge-warn  { background: rgba(255, 152, 0, 0.15);  color: var(--warning); border: 1px solid rgba(255, 152, 0, 0.3); }
+.badge-err   { background: rgba(244, 67, 54, 0.15);  color: #ff8080;        border: 1px solid rgba(244, 67, 54, 0.3); }
+.badge-off   { background: var(--border);            color: var(--text-muted); }
+.badge-ble    { background: rgba(74, 158, 255, 0.15); color: var(--accent);  border: 1px solid rgba(74, 158, 255, 0.3); }
+.badge-modbus { background: rgba(171, 71, 188, 0.15); color: #ce93d8;        border: 1px solid rgba(171, 71, 188, 0.3); }
+.badge-can    { background: rgba(255, 152, 0, 0.15);  color: var(--warning); border: 1px solid rgba(255, 152, 0, 0.3); }
 
 /* --- dl/dt/dd (seccion sistema) --- */
 

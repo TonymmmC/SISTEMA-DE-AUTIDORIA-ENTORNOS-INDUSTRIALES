@@ -8,6 +8,7 @@
 #include "EdgeWebServer.h"
 #include "EdgeBle.h"
 #include "EdgeModbus.h"
+#include "EdgeHousekeeping.h"
 
 void setup() {
     // SEGURIDAD HARDWARE: RS485 DE en modo recepcion antes que nada.
@@ -57,6 +58,9 @@ void setup() {
         Serial.println("[boot] FALLO: Modbus sniffer no operativo");
         return;
     }
+
+    // Housekeeping no es critico: si falla, el sistema sigue operativo.
+    edge::initHousekeeping();
 
     digitalWrite(PIN_LED_USER, HIGH);  // boot completo
     Serial.println("[boot] Sistema operativo");

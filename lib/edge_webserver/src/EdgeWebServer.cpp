@@ -10,6 +10,8 @@
 #include "EdgeModbus.h"
 #include "EdgeLogger.h"
 #include "EdgeStorage.h"
+#include "EdgeHousekeeping.h"
+#include "events.h"
 
 namespace edge {
 
@@ -41,6 +43,31 @@ bool initWebServer() {
         char buf[320];
         serializeJson(doc, buf, sizeof(buf));
         request->send(200, "application/json", buf);
+    });
+
+    s_server.on("/api/stats", HTTP_GET, [](AsyncWebServerRequest* request) {
+        static BleDevice   bleBuf[50];
+        static ModbusFrame mbBuf[20];
+        static AuditEvent  evBuf[64];
+        size_t nBle = edge::obtenerDispositivos(bleBuf, 50);
+        size_t nMb  = edge::obtenerTramasModbus(mbBuf, 20);
+        size_t nEv  = edge::obtenerEventosRecientes(evBuf, 64);
+        size_t mbValid = 0;
+        for (size_t i = 0; i < nMb; i++) if (mbBuf[i].crcValido) mbValid++;
+
+        JsonDocument doc;
+        doc["ble"]          = nBle;
+        doc["modbus"]       = nMb;
+        doc["modbus_valid"] = mbValid;
+        doc["eventos"]      = nEv;
+        doc["ntp"]          = edge::horaSincronizada();
+        doc["sd"]           = edge::sdDisponible();
+        doc["heap"]         = edge::heapLibre();
+        doc["heap_min"]     = edge::heapMinimo();
+        doc["uptime_s"]     = millis() / 1000;
+        static char out[384];
+        serializeJson(doc, out, sizeof(out));
+        request->send(200, "application/json", out);
     });
 
     s_server.on("/api/ble/devices", HTTP_GET, [](AsyncWebServerRequest* request) {

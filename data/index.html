@@ -8,7 +8,15 @@
 </head>
 <body>
   <header>
-    <h1>Sistema Auditoria Edge101</h1>
+    <div class="header-main">
+      <h1>Sistema Auditoria Edge101</h1>
+      <div class="header-estado">
+        <span class="dot" id="conexion-dot"></span>
+        <span id="conexion-texto">conectando...</span>
+        <span class="sep">|</span>
+        <span id="reloj">--:--:--</span>
+      </div>
+    </div>
     <span id="modo-local" class="oculto">modo desarrollo local -- data simulada</span>
   </header>
 
@@ -26,7 +34,27 @@
 
     <main>
       <section data-seccion="sistema">
-        <h2>Estado del sistema</h2>
+        <h2>Resumen de auditoria</h2>
+        <div class="cards">
+          <div class="card">
+            <span class="card-valor" id="stat-ble">0</span>
+            <span class="card-label">Dispositivos BLE</span>
+          </div>
+          <div class="card">
+            <span class="card-valor" id="stat-modbus">0</span>
+            <span class="card-label">Tramas Modbus</span>
+          </div>
+          <div class="card">
+            <span class="card-valor" id="stat-eventos">0</span>
+            <span class="card-label">Eventos auditados</span>
+          </div>
+          <div class="card">
+            <span class="card-valor" id="stat-heap">--</span>
+            <span class="card-label">Heap libre</span>
+          </div>
+        </div>
+
+        <h2 class="mt">Estado del sistema</h2>
         <dl>
           <dt>Dispositivo</dt>      <dd id="device">--</dd>
           <dt>Version firmware</dt> <dd id="version">--</dd>
@@ -34,6 +62,9 @@
           <dt>Uptime</dt>           <dd id="uptime">--</dd>
           <dt>IP</dt>               <dd id="ip">--</dd>
           <dt>Heap libre</dt>       <dd id="heap">--</dd>
+          <dt>Heap minimo</dt>      <dd id="heap-min">--</dd>
+          <dt>Sincronia NTP</dt>    <dd id="ntp"><span class="badge badge-off">--</span></dd>
+          <dt>microSD</dt>          <dd id="sd"><span class="badge badge-off">--</span></dd>
         </dl>
         <p class="indicador" id="indicador">Cargando...</p>
       </section>
