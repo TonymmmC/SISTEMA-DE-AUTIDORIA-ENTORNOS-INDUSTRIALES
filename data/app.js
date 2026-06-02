@@ -20,9 +20,9 @@ var MOCK_MODBUS = [
 ];
 
 var MOCK_CAN = [
-  { hora: "14:23:01", id: "0x100", dlc: 8, datos: "00 01 A4 B0 02 00 00 00" },
-  { hora: "14:23:01", id: "0x101", dlc: 4, datos: "FF FF 00 01" },
-  { hora: "14:23:02", id: "0x200", dlc: 8, datos: "AA BB CC DD EE FF 00 11" }
+  { id: "0x100", ext: false, dlc: 8, datos: "00 01 A4 B0 02 00 00 00", visto_ms: 1000 },
+  { id: "0x101", ext: false, dlc: 4, datos: "FF FF 00 01", visto_ms: 5000 },
+  { id: "0x18FF50E5", ext: true, dlc: 8, datos: "AA BB CC DD EE FF 00 11", visto_ms: 12000 }
 ];
 
 var MOCK_ALERTAS = [
@@ -38,7 +38,7 @@ var MOCK_EVENTS = [
 var MOCK_LOGS = { sd: false, archivos: [] };
 
 var MOCK_STATS = {
-  ble: 3, modbus: 3, modbus_valid: 2, eventos: 5,
+  ble: 3, modbus: 3, modbus_valid: 2, can: 3, eventos: 5,
   ntp: false, sd: false, heap: 215840, heap_min: 198400, uptime_s: 3725
 };
 
@@ -62,6 +62,7 @@ function tickReloj() {
 function rellenarStats(s) {
   document.getElementById('stat-ble').textContent     = s.ble;
   document.getElementById('stat-modbus').textContent  = s.modbus;
+  document.getElementById('stat-can').textContent     = s.can || 0;
   document.getElementById('stat-eventos').textContent = s.eventos;
   document.getElementById('stat-heap').textContent    = formatearBytes(s.heap || 0);
   document.getElementById('heap-min').textContent     = formatearBytes(s.heap_min || 0);
@@ -191,12 +192,26 @@ function cargarModbus() {
 function rellenarCAN(items) {
   var tbody = document.querySelector('#tabla-can tbody');
   tbody.innerHTML = '';
-  items.forEach(function(d) {
+  if (items.length === 0) {
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + d.hora + '</td><td>' + d.id +
-                   '</td><td>' + d.dlc + '</td><td>' + d.datos + '</td>';
+    tr.innerHTML = '<td colspan="4">Sin trafico en el bus CAN</td>';
     tbody.appendChild(tr);
+    return;
+  }
+  items.forEach(function(d) {
+    var fila = document.createElement('tr');
+    var tipo = d.ext ? badge('ext', 'badge-can') : '';
+    fila.innerHTML = '<td>' + formatearVisto(d.visto_ms) + '</td><td>' + d.id + ' ' + tipo +
+                     '</td><td>' + d.dlc + '</td><td>' + (d.datos || '') + '</td>';
+    tbody.appendChild(fila);
   });
+}
+
+function cargarCAN() {
+  fetch('/api/can')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { rellenarCAN(data); })
+    .catch(function() { rellenarCAN(MOCK_CAN); });
 }
 
 function rellenarAlertas(items) {
@@ -299,7 +314,9 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarModbus();
   setInterval(cargarModbus, 5000);
 
-  rellenarCAN(MOCK_CAN);
+  cargarCAN();
+  setInterval(cargarCAN, 5000);
+
   rellenarAlertas(MOCK_ALERTAS);
 
   mostrarSeccion(leerSeccionDeHash());

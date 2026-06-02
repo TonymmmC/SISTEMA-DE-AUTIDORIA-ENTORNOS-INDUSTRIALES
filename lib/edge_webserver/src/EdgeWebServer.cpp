@@ -8,6 +8,7 @@
 #include "EdgeNetwork.h"
 #include "EdgeBle.h"
 #include "EdgeModbus.h"
+#include "EdgeCan.h"
 #include "EdgeLogger.h"
 #include "EdgeStorage.h"
 #include "EdgeHousekeeping.h"
@@ -48,9 +49,11 @@ bool initWebServer() {
     s_server.on("/api/stats", HTTP_GET, [](AsyncWebServerRequest* request) {
         static BleDevice   bleBuf[50];
         static ModbusFrame mbBuf[20];
+        static CanFrame    canBuf[20];
         static AuditEvent  evBuf[64];
         size_t nBle = edge::obtenerDispositivos(bleBuf, 50);
         size_t nMb  = edge::obtenerTramasModbus(mbBuf, 20);
+        size_t nCan = edge::obtenerTramasCan(canBuf, 20);
         size_t nEv  = edge::obtenerEventosRecientes(evBuf, 64);
         size_t mbValid = 0;
         for (size_t i = 0; i < nMb; i++) if (mbBuf[i].crcValido) mbValid++;
@@ -59,6 +62,7 @@ bool initWebServer() {
         doc["ble"]          = nBle;
         doc["modbus"]       = nMb;
         doc["modbus_valid"] = mbValid;
+        doc["can"]          = nCan;
         doc["eventos"]      = nEv;
         doc["ntp"]          = edge::horaSincronizada();
         doc["sd"]           = edge::sdDisponible();
@@ -106,6 +110,32 @@ bool initWebServer() {
             f["visto_ms"] = millis() - buf[i].lastSeenMs;
         }
         static char out[2048];
+        serializeJson(doc, out, sizeof(out));
+        request->send(200, "application/json", out);
+    });
+
+    s_server.on("/api/can", HTTP_GET, [](AsyncWebServerRequest* request) {
+        static CanFrame buf[20];
+        size_t n = edge::obtenerTramasCan(buf, 20);
+
+        JsonDocument doc;
+        JsonArray arr = doc.to<JsonArray>();
+        for (size_t i = 0; i < n; i++) {
+            JsonObject f = arr.add<JsonObject>();
+            char idHex[12];
+            snprintf(idHex, sizeof(idHex), "0x%X", (unsigned)buf[i].id);
+            f["id"]       = idHex;
+            f["ext"]      = buf[i].extendido;
+            f["dlc"]      = buf[i].dlc;
+            char datos[24];
+            size_t pos = 0;
+            for (uint8_t b = 0; b < buf[i].dlc; b++) {
+                pos += snprintf(datos + pos, sizeof(datos) - pos, "%02X ", buf[i].data[b]);
+            }
+            f["datos"]    = datos;
+            f["visto_ms"] = millis() - buf[i].lastSeenMs;
+        }
+        static char out[3072];
         serializeJson(doc, out, sizeof(out));
         request->send(200, "application/json", out);
     });

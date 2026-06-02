@@ -32,3 +32,7 @@ constexpr uint32_t WATCHDOG_TIMEOUT_S = 30;
 // Modbus RTU sniffer (pasivo, listen-only sobre Serial2/RS485)
 constexpr uint32_t MODBUS_BAUD   = 9600;  // baudrate comun en Modbus RTU industrial
 constexpr uint32_t MODBUS_GAP_MS = 4;     // gap inter-trama: 3.5 chars @9600 8N1 ~3.6ms
+
+// CAN Bus listener (TWAI listen-only). Bitrate comun industrial: 500 kbit/s.
+// El driver TWAI no transmite ACK ni error frames en modo listen-only.
+constexpr uint32_t CAN_BITRATE_KBPS = 500;

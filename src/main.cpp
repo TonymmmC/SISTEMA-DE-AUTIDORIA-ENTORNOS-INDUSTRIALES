@@ -8,6 +8,7 @@
 #include "EdgeWebServer.h"
 #include "EdgeBle.h"
 #include "EdgeModbus.h"
+#include "EdgeCan.h"
 #include "EdgeHousekeeping.h"
 
 void setup() {
@@ -56,6 +57,11 @@ void setup() {
 
     if (!edge::initModbus()) {
         Serial.println("[boot] FALLO: Modbus sniffer no operativo");
+        return;
+    }
+
+    if (!edge::initCan()) {
+        Serial.println("[boot] FALLO: CAN listener no operativo");
         return;
     }
 

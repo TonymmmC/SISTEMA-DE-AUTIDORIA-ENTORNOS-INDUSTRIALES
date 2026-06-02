@@ -7,7 +7,7 @@ namespace edge {
 enum class EventType : uint8_t {
     BLE_DEVICE_FOUND = 1,
     MODBUS_FRAME     = 2,
-    // CAN_FRAME (Fase 6)
+    CAN_FRAME        = 3,
 };
 
 struct AuditEvent {

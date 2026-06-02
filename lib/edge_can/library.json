@@ -1,0 +1,8 @@
+{
+  "name": "edge_can",
+  "version": "0.1.0",
+  "description": "Listener CAN Bus pasivo (TWAI listen-only) para auditoria de buses industriales ISO 11898.",
+  "authors": { "name": "Sistema Auditoria Edge101" },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

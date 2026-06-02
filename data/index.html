@@ -45,6 +45,10 @@
             <span class="card-label">Tramas Modbus</span>
           </div>
           <div class="card">
+            <span class="card-valor" id="stat-can">0</span>
+            <span class="card-label">Tramas CAN</span>
+          </div>
+          <div class="card">
             <span class="card-valor" id="stat-eventos">0</span>
             <span class="card-label">Eventos auditados</span>
           </div>
@@ -87,9 +91,8 @@
 
       <section data-seccion="can" class="oculto">
         <h2>Trafico CAN Bus</h2>
-        <p class="placeholder">Datos simulados -- implementacion en Plan 6.</p>
         <table id="tabla-can">
-          <thead><tr><th>Hora</th><th>ID</th><th>DLC</th><th>Datos</th></tr></thead>
+          <thead><tr><th>Visto</th><th>ID</th><th>DLC</th><th>Datos</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>
