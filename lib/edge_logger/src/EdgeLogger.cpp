@@ -48,9 +48,9 @@ static void agregarAlBatch(const AuditEvent& ev) {
 }
 
 static void flushBatch() {
-    for (size_t i = 0; i < s_batchLen; i++) {
-        appendAuditLine(s_batch[i]);
-    }
+    const char* lineas[BATCH_MAX];
+    for (size_t i = 0; i < s_batchLen; i++) lineas[i] = s_batch[i];
+    appendAuditBatch(lineas, s_batchLen);
     s_batchLen = 0;
 }
 

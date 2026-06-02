@@ -74,7 +74,6 @@ bool initNetwork() {
     return true;
 }
 
-
 IPAddress getLocalIP() {
     return s_localIp;
 }

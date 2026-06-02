@@ -56,8 +56,9 @@ bool initWebServer() {
             d["visto_ms"] = millis() - buf[i].lastSeenMs;
         }
 
-        // 50 devices * ~80 bytes = ~4KB + overhead JSON
-        char out[5120];
+        // 50 devices * ~80 bytes = ~4KB + overhead JSON.
+        // Estatico: los handlers async corren serializados en async_tcp.
+        static char out[5120];
         serializeJson(doc, out, sizeof(out));
         request->send(200, "application/json", out);
     });
@@ -75,7 +76,9 @@ bool initWebServer() {
             e["source"]    = buf[i].source;
             e["detail"]    = buf[i].detail;
         }
-        char out[6144];
+        // Peor caso 64 eventos con detail lleno ~8.8KB. Estatico para no
+        // cargar el stack del task async y evitar truncado de serializeJson.
+        static char out[9216];
         serializeJson(doc, out, sizeof(out));
         req->send(200, "application/json", out);
     });
@@ -86,7 +89,7 @@ bool initWebServer() {
             doc["sd"] = false;
             JsonArray arr = doc["archivos"].to<JsonArray>();
             (void)arr;
-            char out[64];
+            static char out[64];
             serializeJson(doc, out, sizeof(out));
             req->send(200, "application/json", out);
             return;
@@ -111,7 +114,7 @@ bool initWebServer() {
             f["nombre"] = s_files[i].nombre;
             f["bytes"]  = (uint32_t)s_files[i].bytes;
         }
-        char out[2048];
+        static char out[2048];
         serializeJson(doc, out, sizeof(out));
         req->send(200, "application/json", out);
     });
@@ -135,11 +138,11 @@ bool initWebServer() {
             req->send(404, "text/plain", "microSD no disponible");
             return;
         }
-        String path = String("/audit/") + nombre;
-        if (!SD.exists(path.c_str())) {
+        if (!edge::auditExists(nombre.c_str())) {
             req->send(404, "text/plain", "Archivo no encontrado");
             return;
         }
+        String path = String("/audit/") + nombre;
         req->send(SD, path.c_str(), "text/csv", true);
     });
 
