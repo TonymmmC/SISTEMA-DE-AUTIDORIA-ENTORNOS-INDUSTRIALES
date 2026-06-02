@@ -1,397 +1,475 @@
+/* ── MOCK DATA ──────────────────────────────────────── */
+
 var MOCK_STATUS = {
-  device: "Edge101 Auditor (mock)",
-  version: "0.1.0-dev",
-  build: "local-dev",
-  uptime_s: 3725,
-  free_heap: 215840,
-  ip: "127.0.0.1"
+  device: 'Edge101 Auditor', version: '0.1.0-dev', build: 'local-dev',
+  uptime_s: 3725, free_heap: 218240, ip: '192.168.1.101'
 };
 
 var MOCK_BLE = [
-  { mac: "AA:BB:CC:11:22:33", nombre: "Smartphone Operador", rssi: -42, ultimaVez: "hace 2s" },
-  { mac: "DE:AD:BE:EF:00:01", nombre: "Beacon Sala 3",       rssi: -68, ultimaVez: "hace 14s" },
-  { mac: "55:44:33:22:11:00", nombre: "Sensor Temp",         rssi: -55, ultimaVez: "hace 1m" }
-];
-
-var MOCK_MODBUS = [
-  { slave: 3,  function: 3, len: 8, crc_ok: true,  visto_ms: 2000 },
-  { slave: 7,  function: 6, len: 8, crc_ok: true,  visto_ms: 14000 },
-  { slave: 12, function: 3, len: 8, crc_ok: false, visto_ms: 60000 }
-];
-
-var MOCK_CAN = [
-  { id: "0x100", ext: false, dlc: 8, datos: "00 01 A4 B0 02 00 00 00", visto_ms: 1000 },
-  { id: "0x101", ext: false, dlc: 4, datos: "FF FF 00 01", visto_ms: 5000 },
-  { id: "0x18FF50E5", ext: true, dlc: 8, datos: "AA BB CC DD EE FF 00 11", visto_ms: 12000 }
-];
-
-var MOCK_ALERTAS = [
-  { utc: 0, nivel: "WARNING", mensaje: "Nuevo dispositivo BLE detectado (id 0x1A2B3C)" },
-  { utc: 0, nivel: "WARNING", mensaje: "Nueva direccion Modbus detectada: esclavo 12" }
+  { mac: 'AA:BB:CC:11:22:33', nombre: 'Smartphone Operador A',  rssi: -38, visto_ms: 1800  },
+  { mac: 'DE:AD:BE:EF:00:01', nombre: 'Beacon Sala Servidores', rssi: -56, visto_ms: 4200  },
+  { mac: '55:44:33:22:11:00', nombre: 'Sensor Temperatura',     rssi: -62, visto_ms: 9000  },
+  { mac: 'F0:E1:D2:C3:B4:A5', nombre: '',                       rssi: -74, visto_ms: 22000 },
+  { mac: '11:22:AB:CD:EF:10', nombre: 'Tablet Mantenimiento',   rssi: -81, visto_ms: 45000 },
+  { mac: '99:88:77:66:55:44', nombre: '',                       rssi: -91, visto_ms: 88000 },
 ];
 
 var MOCK_EVENTS = [
-  { utc: 0,          uptime_ms: 12000, source: "ble", detail: "MAC=AA:BB:CC:11:22:33 name=Smartphone rssi=-42" },
-  { utc: 0,          uptime_ms: 8500,  source: "ble", detail: "MAC=DE:AD:BE:EF:00:01 name=Beacon rssi=-68" }
+  { utc:0, uptime_ms:245000, source:'ble', detail:'MAC=AA:BB:CC:11:22:33 name=Smartphone rssi=-38' },
+  { utc:0, uptime_ms:230000, source:'ble', detail:'MAC=11:22:AB:CD:EF:10 name=Tablet rssi=-81' },
+  { utc:0, uptime_ms:198000, source:'ble', detail:'MAC=DE:AD:BE:EF:00:01 name=Beacon Sala rssi=-56' },
+  { utc:0, uptime_ms:175000, source:'ble', detail:'MAC=55:44:33:22:11:00 name=Sensor Temperatura rssi=-62' },
+  { utc:0, uptime_ms:120000, source:'ble', detail:'MAC=F0:E1:D2:C3:B4:A5 name=- rssi=-74' },
+  { utc:0, uptime_ms:85000,  source:'ble', detail:'MAC=99:88:77:66:55:44 name=- rssi=-91' },
 ];
 
 var MOCK_LOGS = { sd: false, archivos: [] };
 
-var MOCK_STATS = {
-  ble: 3, modbus: 3, modbus_valid: 2, can: 3, alertas: 2, eventos: 5,
-  ntp: false, sd: false, heap: 215840, heap_min: 198400, uptime_s: 3725
+/* ── STATE ──────────────────────────────────────────── */
+
+var state = {
+  bleDevices:    [],
+  bleHistory:    [],   // [count, count, ...] ultimas 30 lecturas cada 5s
+  knownMacs:     {},   // mac -> timestamp primera vez vista (sesion)
+  newMacsThisCycle: [],
+  events:        [],
+  status:        null,
+  sdInfo:        null,
+  connected:     false,
+  isMock:        false,
+  lastBleMs:     0,
+  totalHeap:     327680,   // referencia ESP32 (bytes)
 };
 
-function badge(texto, clase) {
-  return '<span class="badge ' + clase + '">' + texto + '</span>';
+/* ── RSSI HELPERS ───────────────────────────────────── */
+
+function rssiInfo(rssi) {
+  var pct = Math.max(0, Math.min(100, ((rssi + 100) / 70) * 100));
+  if (rssi >= -60) return { pct:pct, cls:'exc',  label:'Excelente' };
+  if (rssi >= -70) return { pct:pct, cls:'ok',   label:'Bueno'     };
+  if (rssi >= -80) return { pct:pct, cls:'warn', label:'Débil'     };
+  return              { pct:pct, cls:'crit', label:'Crítico'   };
 }
 
-var filtros = {};
+/* ── FORMATTING ─────────────────────────────────────── */
 
-function setCuenta(id, n) {
-  var el = document.getElementById(id);
-  if (el) el.textContent = n;
-}
-
-function aplicarFiltro(tablaId) {
-  var texto = (filtros[tablaId] || '').toLowerCase();
-  var filas = document.querySelectorAll('#' + tablaId + ' tbody tr');
-  var visibles = 0;
-  filas.forEach(function(tr) {
-    var ok = !texto || tr.textContent.toLowerCase().indexOf(texto) >= 0;
-    tr.style.display = ok ? '' : 'none';
-    if (ok) visibles++;
-  });
-  return visibles;
-}
-
-function actualizarConexion(ok) {
-  var dot = document.getElementById('conexion-dot');
-  var txt = document.getElementById('conexion-texto');
-  if (!dot || !txt) return;
-  dot.className = 'dot ' + (ok ? 'dot-ok' : 'dot-err');
-  txt.textContent = ok ? 'en linea' : 'sin conexion';
-}
-
-function tickReloj() {
-  var el = document.getElementById('reloj');
-  if (el) el.textContent = new Date().toLocaleTimeString('es-BO');
-}
-
-function rellenarStats(s) {
-  document.getElementById('stat-ble').textContent     = s.ble;
-  document.getElementById('stat-modbus').textContent  = s.modbus;
-  document.getElementById('stat-can').textContent     = s.can || 0;
-  document.getElementById('stat-eventos').textContent = s.eventos;
-  var alEl = document.getElementById('stat-alertas');
-  alEl.textContent = s.alertas || 0;
-  alEl.classList.toggle('activa', (s.alertas || 0) > 0);
-  document.getElementById('stat-heap').textContent    = formatearBytes(s.heap || 0);
-  document.getElementById('heap-min').textContent     = formatearBytes(s.heap_min || 0);
-  var ntpEl = document.getElementById('ntp');
-  ntpEl.innerHTML = s.ntp ? badge('sincronizada', 'badge-ok')
-                          : badge('NTP pendiente', 'badge-warn');
-  var sdEl = document.getElementById('sd');
-  sdEl.innerHTML = s.sd ? badge('presente', 'badge-ok')
-                        : badge('no presente', 'badge-off');
-}
-
-function cargarStats() {
-  fetch('/api/stats')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { actualizarConexion(true); rellenarStats(data); })
-    .catch(function() { actualizarConexion(false); rellenarStats(MOCK_STATS); });
-}
-
-function formatearHoraUtc(utc) {
-  if (!utc || utc === 0) return 'sin hora (NTP pendiente)';
-  var d = new Date(utc * 1000);
-  return d.toLocaleString('es-BO', { timeZone: 'America/La_Paz' });
-}
-
-function formatearUptime(segundos) {
-  var h = Math.floor(segundos / 3600);
-  var m = Math.floor((segundos % 3600) / 60);
-  var s = segundos % 60;
-  return h + 'h ' + m + 'm ' + s + 's';
-}
-
-function formatearBytes(bytes) {
-  return (bytes / 1024).toFixed(1) + ' KB';
-}
-
-function rellenarDOM(data) {
-  document.getElementById('device').textContent  = data.device   || '--';
-  document.getElementById('version').textContent = data.version  || '--';
-  document.getElementById('build').textContent   = data.build    || '--';
-  document.getElementById('uptime').textContent  = formatearUptime(data.uptime_s  || 0);
-  document.getElementById('ip').textContent      = data.ip       || '--';
-  document.getElementById('heap').textContent    = formatearBytes(data.free_heap  || 0);
-  var ind = document.getElementById('indicador');
-  ind.textContent = 'Sistema operativo';
-  ind.className   = 'indicador ok';
-}
-
-function usarMockData() {
-  rellenarDOM(MOCK_STATUS);
-  document.getElementById('modo-local').classList.remove('oculto');
-}
-
-function cargarEstado() {
-  fetch('/api/status')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { rellenarDOM(data); })
-    .catch(function() { usarMockData(); });
-}
-
-function formatearVisto(ms) {
-  if (ms < 60000)  return 'hace ' + Math.floor(ms / 1000) + 's';
+function fmtVisto(ms) {
+  if (ms < 60000)   return 'hace ' + Math.floor(ms / 1000) + 's';
   if (ms < 3600000) return 'hace ' + Math.floor(ms / 60000) + 'm';
   return 'hace ' + Math.floor(ms / 3600000) + 'h';
 }
 
-function rellenarBLE(items) {
-  var tbody = document.querySelector('#tabla-ble tbody');
-  tbody.innerHTML = '';
-  if (items.length === 0) {
-    var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="4">Sin dispositivos detectados</td>';
-    tbody.appendChild(tr);
-    setCuenta('cuenta-ble', 0);
-    return;
+function fmtUptime(s) {
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  var ss = s % 60;
+  if (h > 0) return h + 'h ' + m + 'm ' + ss + 's';
+  if (m > 0) return m + 'm ' + ss + 's';
+  return ss + 's';
+}
+
+function fmtBytes(b) {
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1024).toFixed(0) + ' KB';
+}
+
+function fmtHeapKB(b) { return Math.round(b / 1024) + ' KB'; }
+
+function fmtEvTime(ev) {
+  if (ev.utc && ev.utc > 0) {
+    var d = new Date(ev.utc * 1000);
+    return d.toLocaleTimeString('es-BO', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   }
-  items.forEach(function(d) {
-    var tr = document.createElement('tr');
-    var visto = d.visto_ms !== undefined ? formatearVisto(d.visto_ms) : (d.ultimaVez || '--');
-    var clase = d.rssi > -60 ? 'badge-ok' : (d.rssi > -75 ? 'badge-warn' : 'badge-err');
-    var rssi = badge(d.rssi + ' dBm', clase);
-    tr.innerHTML = '<td>' + d.mac + '</td><td>' + (d.nombre || '') +
-                   '</td><td>' + rssi + '</td><td>' + visto + '</td>';
-    tbody.appendChild(tr);
+  var s = Math.floor(ev.uptime_ms / 1000);
+  return 'up+' + fmtUptime(s);
+}
+
+/* ── SPARKLINE ──────────────────────────────────────── */
+
+function buildSparkPaths(data, w, h, pad) {
+  pad = pad || 4;
+  if (data.length < 2) return { line: '', area: '' };
+  var max = Math.max.apply(null, data.concat([1]));
+  var pts = data.map(function(v, i) {
+    var x = (i / (data.length - 1)) * w;
+    var y = h - pad - (v / max) * (h - pad * 2);
+    return [parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1))];
   });
-  setCuenta('cuenta-ble', items.length);
-  aplicarFiltro('tabla-ble');
+  var cmds = pts.map(function(p, i) { return (i ? 'L' : 'M') + p[0] + ',' + p[1]; }).join('');
+  var last = pts[pts.length - 1];
+  var area = cmds + 'L' + last[0] + ',' + h + 'L0,' + h + 'Z';
+  return { line: cmds, area: area };
 }
 
-function cargarBLE() {
-  fetch('/api/ble/devices')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { rellenarBLE(data); })
-    .catch(function() { rellenarBLE(MOCK_BLE); });
-}
+function updateSparkline() {
+  var data = state.bleHistory;
+  var paths = buildSparkPaths(data, 300, 52, 4);
+  document.getElementById('sp-line').setAttribute('d', paths.line);
+  document.getElementById('sp-area').setAttribute('d', paths.area);
 
-function formatearFuncion(fc) {
-  var hex = '0x' + ('0' + fc.toString(16).toUpperCase()).slice(-2);
-  var nombres = { 1: 'Read Coils', 2: 'Read Inputs', 3: 'Read Holding',
-                  4: 'Read Input Reg', 5: 'Write Coil', 6: 'Write Reg',
-                  15: 'Write Coils', 16: 'Write Regs' };
-  return nombres[fc] ? (hex + ' ' + nombres[fc]) : hex;
-}
-
-function rellenarModbus(items) {
-  var tbody = document.querySelector('#tabla-modbus tbody');
-  tbody.innerHTML = '';
-  if (items.length === 0) {
-    var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="5">Sin trafico en el bus RS485</td>';
-    tbody.appendChild(tr);
-    setCuenta('cuenta-modbus', 0);
-    return;
+  var el = document.getElementById('sp-range');
+  if (data.length > 1) {
+    el.textContent = '(' + data.length * 5 + 's window)';
   }
-  items.forEach(function(d) {
-    var fila = document.createElement('tr');
-    var crc = d.crc_ok ? badge('OK', 'badge-ok') : badge('ERR', 'badge-err');
-    fila.innerHTML = '<td>' + formatearVisto(d.visto_ms) + '</td><td>' + d.slave +
-                     '</td><td>' + formatearFuncion(d.function) + '</td><td>' + d.len +
-                     '</td><td>' + crc + '</td>';
-    tbody.appendChild(fila);
+}
+
+/* ── RSSI DISTRIBUTION CHART ─────────────────────────── */
+
+function updateRssiDist() {
+  var devs = state.bleDevices;
+  var bins = [
+    { label: 'Excelente', range: '≥ −60',  cls: 'exc',  color: '#22c55e', count: 0 },
+    { label: 'Bueno',     range: '−70',    cls: 'ok',   color: '#84cc16', count: 0 },
+    { label: 'Débil',     range: '−80',    cls: 'warn', color: '#f59e0b', count: 0 },
+    { label: 'Crítico',   range: '< −80',  cls: 'crit', color: '#ef4444', count: 0 },
+  ];
+
+  devs.forEach(function(d) {
+    var q = rssiInfo(d.rssi);
+    for (var i = 0; i < bins.length; i++) {
+      if (bins[i].cls === q.cls) { bins[i].count++; break; }
+    }
   });
-  setCuenta('cuenta-modbus', items.length);
-  aplicarFiltro('tabla-modbus');
-}
 
-function cargarModbus() {
-  fetch('/api/modbus')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { rellenarModbus(data); })
-    .catch(function() { rellenarModbus(MOCK_MODBUS); });
-}
+  var total = devs.length || 1;
+  var el = document.getElementById('rssi-dist');
 
-function rellenarCAN(items) {
-  var tbody = document.querySelector('#tabla-can tbody');
-  tbody.innerHTML = '';
-  if (items.length === 0) {
-    var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="4">Sin trafico en el bus CAN</td>';
-    tbody.appendChild(tr);
-    setCuenta('cuenta-can', 0);
+  if (devs.length === 0) {
+    el.innerHTML = '<div class="rssi-empty">Sin datos BLE</div>';
     return;
   }
-  items.forEach(function(d) {
-    var fila = document.createElement('tr');
-    var tipo = d.ext ? badge('ext', 'badge-can') : '';
-    fila.innerHTML = '<td>' + formatearVisto(d.visto_ms) + '</td><td>' + d.id + ' ' + tipo +
-                     '</td><td>' + d.dlc + '</td><td>' + (d.datos || '') + '</td>';
-    tbody.appendChild(fila);
-  });
-  setCuenta('cuenta-can', items.length);
-  aplicarFiltro('tabla-can');
+
+  var html = bins.map(function(b) {
+    var pct = (b.count / total * 100).toFixed(0) + '%';
+    return '<div class="rssi-row">' +
+      '<div class="rssi-row-lbl">' + b.label + '</div>' +
+      '<div class="rssi-row-track"><div class="rssi-row-fill" style="width:' + pct + ';background:' + b.color + '"></div></div>' +
+      '<div class="rssi-row-count">' + b.count + '</div>' +
+    '</div>';
+  }).join('');
+
+  el.innerHTML = html;
 }
 
-function cargarCAN() {
-  fetch('/api/can')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { rellenarCAN(data); })
-    .catch(function() { rellenarCAN(MOCK_CAN); });
+/* ── EVENT FEED ──────────────────────────────────────── */
+
+function evSourceClass(src) {
+  if (src === 'ble')    return 'ble';
+  if (src === 'modbus') return 'modbus';
+  if (src === 'can')    return 'can';
+  return 'other';
 }
 
-function rellenarAlertas(items) {
-  var ul = document.getElementById('lista-alertas');
-  ul.innerHTML = '';
-  if (items.length === 0) {
-    var vacio = document.createElement('li');
-    vacio.className = 'alerta-ok';
-    vacio.textContent = 'Sin alertas -- ninguna entidad anomala detectada';
-    ul.appendChild(vacio);
-    setCuenta('cuenta-alertas', 0);
-    return;
-  }
-  items.forEach(function(d) {
+function buildEvItem(ev) {
+  var sc = evSourceClass(ev.source);
+  var li = document.createElement('li');
+  li.className = 'ev-item ev-item--' + sc;
+  li.innerHTML =
+    '<span class="ev-time">' + fmtEvTime(ev) + '</span>' +
+    '<span class="ev-src ev-src--' + sc + '">' + (ev.source || '?').toUpperCase() + '</span>' +
+    '<span class="ev-detail">' + escHtml(ev.detail) + '</span>';
+  return li;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function updateEventFeeds() {
+  var evs = state.events;
+
+  // mini feed (overview, last 5)
+  var mini = document.getElementById('mini-feed');
+  mini.innerHTML = '';
+  var shown = evs.slice(0, 5);
+  if (shown.length === 0) {
     var li = document.createElement('li');
-    li.className = 'alerta-' + d.nivel.toLowerCase();
-    li.textContent = '[' + formatearHoraUtc(d.utc) + '] ' + d.nivel + ': ' + d.mensaje;
-    ul.appendChild(li);
-  });
-  setCuenta('cuenta-alertas', items.length);
-}
-
-function cargarAlertas() {
-  fetch('/api/alerts')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { rellenarAlertas(data); })
-    .catch(function() { rellenarAlertas(MOCK_ALERTAS); });
-}
-
-function rellenarEventos(items) {
-  var tbody = document.querySelector('#tabla-eventos tbody');
-  tbody.innerHTML = '';
-  if (items.length === 0) {
-    var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="3">Sin eventos registrados</td>';
-    tbody.appendChild(tr);
-    setCuenta('cuenta-eventos', 0);
-    return;
+    li.className = 'ev-empty';
+    li.textContent = 'Sin eventos registrados';
+    mini.appendChild(li);
+  } else {
+    shown.forEach(function(ev) { mini.appendChild(buildEvItem(ev)); });
   }
-  items.forEach(function(d) {
-    var tr = document.createElement('tr');
-    var clase = d.source === 'modbus' ? 'badge-modbus' : (d.source === 'can' ? 'badge-can' : 'badge-ble');
-    tr.innerHTML = '<td>' + formatearHoraUtc(d.utc) + '</td><td>' + badge(d.source, clase) +
-                   '</td><td>' + d.detail + '</td>';
-    tbody.appendChild(tr);
-  });
-  setCuenta('cuenta-eventos', items.length);
-  aplicarFiltro('tabla-eventos');
+
+  // full feed (eventos section)
+  var full = document.getElementById('ev-feed');
+  full.innerHTML = '';
+  document.getElementById('ev-chip').textContent = evs.length;
+  if (evs.length === 0) {
+    var li2 = document.createElement('li');
+    li2.className = 'ev-empty';
+    li2.textContent = 'Sin eventos registrados';
+    full.appendChild(li2);
+  } else {
+    evs.forEach(function(ev) { full.appendChild(buildEvItem(ev)); });
+  }
 }
 
-function rellenarLogs(data) {
-  var estadoEl = document.getElementById('sd-estado');
-  var tablaEl  = document.getElementById('tabla-logs');
+/* ── BLE DEVICE LIST ─────────────────────────────────── */
+
+function buildDevCard(d) {
+  var q = rssiInfo(d.rssi);
+  var isNew = state.newMacsThisCycle.indexOf(d.mac) >= 0;
+  var visto = d.visto_ms !== undefined ? fmtVisto(d.visto_ms) : '--';
+
+  return '<div class="dev-card">' +
+    '<div class="dev-signal">' +
+      '<div class="sig-track"><div class="sig-fill sig-fill--' + q.cls + '" style="width:' + q.pct.toFixed(0) + '%"></div></div>' +
+      '<div class="sig-meta">' +
+        '<span class="sig-dbm sig-dbm--' + q.cls + '">' + d.rssi + ' dBm</span>' +
+        '<span class="sig-qlabel">' + q.label + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="dev-info">' +
+      '<span class="dev-mac">' + escHtml(d.mac) + '</span>' +
+      '<span class="dev-name">' + (d.nombre ? escHtml(d.nombre) : '<em style="opacity:.5">sin nombre</em>') + '</span>' +
+    '</div>' +
+    '<div class="dev-meta">' +
+      '<span class="dev-seen">' + visto + '</span>' +
+      (isNew ? '<span class="badge-new">NUEVO</span>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function updateBleSection() {
+  var devs = state.bleDevices.slice().sort(function(a, b) { return b.rssi - a.rssi; });
+  var container = document.getElementById('dev-list');
+
+  document.getElementById('ble-chip').textContent = devs.length;
+
+  var navChip = document.getElementById('nav-ble-chip');
+  navChip.textContent = devs.length;
+  navChip.classList.toggle('visible', devs.length > 0);
+
+  if (devs.length === 0) {
+    container.innerHTML = '<div class="empty-state">Sin dispositivos BLE detectados en los últimos 2 min</div>';
+  } else {
+    container.innerHTML = devs.map(buildDevCard).join('');
+  }
+
+  var ts = document.getElementById('ble-ts');
+  if (state.lastBleMs) {
+    ts.textContent = 'actualizado ' + fmtVisto(Date.now() - state.lastBleMs);
+  }
+}
+
+/* ── KPI UPDATE ──────────────────────────────────────── */
+
+function updateKpis() {
+  var devs = state.bleDevices;
+  var total = Object.keys(state.knownMacs).length;
+
+  document.getElementById('k-ble-activos').textContent = devs.length;
+  document.getElementById('k-ble-total').textContent   = total;
+  document.getElementById('k-eventos').textContent     = state.events.length;
+
+  if (state.status) {
+    var h = state.status.free_heap;
+    var pct = Math.min(100, (h / state.totalHeap) * 100);
+    document.getElementById('k-heap').textContent = fmtHeapKB(h);
+    setBarPct('k-heap-bar', pct);
+  }
+}
+
+function setBarPct(id, pct) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.width = pct.toFixed(0) + '%';
+  el.style.background = pct > 50 ? 'var(--ok)' : pct > 25 ? 'var(--warn)' : 'var(--crit)';
+}
+
+/* ── SISTEMA UPDATE ──────────────────────────────────── */
+
+function updateSistema() {
+  var s = state.status;
+  if (!s) return;
+  document.getElementById('s-device').textContent  = s.device  || '--';
+  document.getElementById('s-version').textContent = s.version || '--';
+  document.getElementById('s-build').textContent   = s.build   || '--';
+  document.getElementById('s-ip').textContent      = s.ip      || '--';
+  document.getElementById('s-uptime').textContent  = fmtUptime(s.uptime_s || 0);
+
+  var h = s.free_heap || 0;
+  var pct = Math.min(100, (h / state.totalHeap) * 100);
+  document.getElementById('s-heap').textContent    = fmtBytes(h);
+  document.getElementById('s-heap-pct').textContent = '(' + pct.toFixed(0) + '% libre)';
+  setBarPct('s-heap-bar', pct);
+
+  document.getElementById('header-ip').textContent  = s.ip || '--';
+  document.getElementById('footer-up').textContent  = 'uptime: ' + fmtUptime(s.uptime_s || 0);
+}
+
+/* ── LOGS UPDATE ─────────────────────────────────────── */
+
+function updateLogs(data) {
+  state.sdInfo = data;
+  var missing = document.getElementById('sd-missing');
+  var tabla   = document.getElementById('t-logs');
+
   if (!data.sd) {
-    estadoEl.classList.remove('oculto');
-    tablaEl.classList.add('oculto');
+    missing.classList.remove('oculto');
+    tabla.classList.add('oculto');
     return;
   }
-  estadoEl.classList.add('oculto');
-  tablaEl.classList.remove('oculto');
-  var tbody = tablaEl.querySelector('tbody');
+
+  missing.classList.add('oculto');
+  tabla.classList.remove('oculto');
+  var tbody = tabla.querySelector('tbody');
   tbody.innerHTML = '';
   (data.archivos || []).forEach(function(f) {
     var tr = document.createElement('tr');
-    var kb = (f.bytes / 1024).toFixed(1) + ' KB';
-    var enlace = '<a href="/api/logs/download?file=' + f.nombre + '">descargar</a>';
-    tr.innerHTML = '<td>' + f.nombre + '</td><td>' + kb + '</td><td>' + enlace + '</td>';
+    tr.innerHTML = '<td>' + escHtml(f.nombre) + '</td>' +
+                   '<td>' + (f.bytes / 1024).toFixed(1) + ' KB</td>' +
+                   '<td><a href="/api/logs/download?file=' + encodeURIComponent(f.nombre) + '">descargar</a></td>';
     tbody.appendChild(tr);
   });
 }
 
-function cargarEventos() {
+/* ── API FETCHERS ────────────────────────────────────── */
+
+function setConn(ok) {
+  state.connected = ok;
+  var dot  = document.getElementById('conn-dot');
+  var text = document.getElementById('conn-text');
+  dot.className  = 'conn-dot ' + (ok ? 'ok' : 'err');
+  text.textContent = ok ? 'conectado' : 'sin conexion';
+}
+
+function fetchStatus() {
+  fetch('/api/status')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      state.status = data;
+      state.isMock = false;
+      setConn(true);
+      updateSistema();
+      updateKpis();
+      document.getElementById('modo-local').classList.add('oculto');
+    })
+    .catch(function() {
+      if (!state.status) {
+        state.status = MOCK_STATUS;
+        state.isMock = true;
+        document.getElementById('modo-local').classList.remove('oculto');
+        var dot = document.getElementById('conn-dot');
+        dot.className = 'conn-dot pulse';
+        document.getElementById('conn-text').textContent = 'modo local';
+        updateSistema();
+        updateKpis();
+      }
+    });
+}
+
+function fetchBle() {
+  fetch('/api/ble/devices')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { applyBleData(data); })
+    .catch(function() {
+      if (state.isMock) applyBleData(MOCK_BLE);
+    });
+}
+
+function applyBleData(devs) {
+  state.newMacsThisCycle = [];
+  var now = Date.now();
+
+  devs.forEach(function(d) {
+    if (!state.knownMacs[d.mac]) {
+      state.knownMacs[d.mac] = now;
+      state.newMacsThisCycle.push(d.mac);
+    }
+  });
+
+  state.bleDevices = devs;
+  state.lastBleMs  = now;
+
+  // historial para sparkline (max 30 puntos = ~2.5 min)
+  state.bleHistory.push(devs.length);
+  if (state.bleHistory.length > 30) state.bleHistory.shift();
+
+  updateBleSection();
+  updateKpis();
+  updateSparkline();
+  updateRssiDist();
+}
+
+function fetchEvents() {
   fetch('/api/events')
     .then(function(r) { return r.json(); })
-    .then(function(data) { rellenarEventos(data); })
-    .catch(function() { rellenarEventos(MOCK_EVENTS); });
+    .then(function(data) {
+      state.events = data;
+      updateEventFeeds();
+    })
+    .catch(function() {
+      if (state.isMock && state.events.length === 0) {
+        state.events = MOCK_EVENTS;
+        updateEventFeeds();
+      }
+    });
 }
 
-function cargarLogs() {
+function fetchLogs() {
   fetch('/api/logs')
     .then(function(r) { return r.json(); })
-    .then(function(data) { rellenarLogs(data); })
-    .catch(function() { rellenarLogs(MOCK_LOGS); });
-}
-
-function mostrarSeccion(nombre) {
-  document.querySelectorAll('main section').forEach(function(s) {
-    s.classList.toggle('oculto', s.dataset.seccion !== nombre);
-  });
-  document.querySelectorAll('.sidebar a').forEach(function(a) {
-    a.classList.toggle('activo', a.getAttribute('href') === '#/' + nombre);
-  });
-}
-
-function leerSeccionDeHash() {
-  var hash = window.location.hash || '#/sistema';
-  return hash.replace('#/', '') || 'sistema';
-}
-
-var timers = [];
-var pausado = false;
-
-// Lista de [funcion, intervalo_ms] que se refrescan en vivo.
-var TAREAS = [
-  [cargarStats, 5000], [cargarEstado, 5000], [cargarBLE, 5000],
-  [cargarEventos, 5000], [cargarLogs, 15000], [cargarModbus, 5000],
-  [cargarCAN, 5000], [cargarAlertas, 5000]
-];
-
-function iniciarPolling() {
-  TAREAS.forEach(function(t) {
-    t[0]();
-    timers.push(setInterval(t[0], t[1]));
-  });
-}
-
-function detenerPolling() {
-  timers.forEach(clearInterval);
-  timers = [];
-}
-
-function alternarPausa() {
-  pausado = !pausado;
-  var btn = document.getElementById('btn-pausa');
-  btn.textContent = pausado ? 'Reanudar' : 'Pausar';
-  btn.classList.toggle('activo', pausado);
-  if (pausado) detenerPolling();
-  else iniciarPolling();
-}
-
-function conectarFiltros() {
-  document.querySelectorAll('.filtro').forEach(function(inp) {
-    inp.addEventListener('input', function() {
-      filtros[inp.dataset.tabla] = inp.value;
-      aplicarFiltro(inp.dataset.tabla);
+    .then(function(data) { updateLogs(data); })
+    .catch(function() {
+      if (state.isMock) updateLogs(MOCK_LOGS);
     });
+}
+
+/* ── NAVIGATION ──────────────────────────────────────── */
+
+function getSecFromHash() {
+  var h = window.location.hash || '#/overview';
+  return h.replace('#/', '') || 'overview';
+}
+
+function navTo(sec) {
+  document.querySelectorAll('main section').forEach(function(s) {
+    s.classList.toggle('oculto', s.dataset.sec !== sec);
+  });
+  document.querySelectorAll('.nav-item').forEach(function(a) {
+    var href = a.getAttribute('href') || '';
+    a.classList.toggle('activo', href === '#/' + sec);
   });
 }
+
+/* ── INIT ────────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', function() {
-  tickReloj();
-  setInterval(tickReloj, 1000);
 
-  conectarFiltros();
-  document.getElementById('btn-pausa').addEventListener('click', alternarPausa);
-  iniciarPolling();
+  // initial connection dot state
+  document.getElementById('conn-dot').className = 'conn-dot pulse';
+  document.getElementById('conn-text').textContent = 'conectando...';
 
-  mostrarSeccion(leerSeccionDeHash());
-  window.addEventListener('hashchange', function() {
-    mostrarSeccion(leerSeccionDeHash());
+  // navigation
+  navTo(getSecFromHash());
+  window.addEventListener('hashchange', function() { navTo(getSecFromHash()); });
+  document.querySelectorAll('[data-link]').forEach(function(a) {
+    a.addEventListener('click', function() {
+      setTimeout(function() { navTo(getSecFromHash()); }, 0);
+    });
   });
+
+  // initial fetch
+  fetchStatus();
+  fetchBle();
+  fetchEvents();
+  fetchLogs();
+
+  // polling
+  setInterval(fetchStatus, 5000);
+  setInterval(fetchBle,    5000);
+  setInterval(fetchEvents, 5000);
+  setInterval(fetchLogs,   15000);
+
+  // update "updated X ago" label in BLE section
+  setInterval(function() {
+    var ts = document.getElementById('ble-ts');
+    if (state.lastBleMs) {
+      ts.textContent = 'actualizado ' + fmtVisto(Date.now() - state.lastBleMs);
+    }
+  }, 2000);
 });
