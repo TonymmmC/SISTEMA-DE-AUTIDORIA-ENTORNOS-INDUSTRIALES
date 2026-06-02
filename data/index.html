@@ -15,6 +15,7 @@
         <span id="conexion-texto">conectando...</span>
         <span class="sep">|</span>
         <span id="reloj">--:--:--</span>
+        <button id="btn-pausa" class="btn-pausa" title="Congela el dashboard para inspeccionar">Pausar</button>
       </div>
     </div>
     <span id="modo-local" class="oculto">modo desarrollo local -- data simulada</span>
@@ -78,7 +79,10 @@
       </section>
 
       <section data-seccion="ble" class="oculto">
-        <h2>Dispositivos Bluetooth</h2>
+        <h2>Dispositivos Bluetooth <span class="cuenta" id="cuenta-ble">0</span></h2>
+        <div class="toolbar">
+          <input class="filtro" data-tabla="tabla-ble" placeholder="filtrar por MAC o nombre...">
+        </div>
         <table id="tabla-ble">
           <thead><tr><th>MAC</th><th>Nombre</th><th>RSSI</th><th>Visto</th></tr></thead>
           <tbody></tbody>
@@ -86,7 +90,10 @@
       </section>
 
       <section data-seccion="modbus" class="oculto">
-        <h2>Trafico Modbus RTU</h2>
+        <h2>Trafico Modbus RTU <span class="cuenta" id="cuenta-modbus">0</span></h2>
+        <div class="toolbar">
+          <input class="filtro" data-tabla="tabla-modbus" placeholder="filtrar por esclavo o funcion...">
+        </div>
         <table id="tabla-modbus">
           <thead><tr><th>Visto</th><th>Esclavo</th><th>Funcion</th><th>Bytes</th><th>CRC</th></tr></thead>
           <tbody></tbody>
@@ -94,7 +101,10 @@
       </section>
 
       <section data-seccion="can" class="oculto">
-        <h2>Trafico CAN Bus</h2>
+        <h2>Trafico CAN Bus <span class="cuenta" id="cuenta-can">0</span></h2>
+        <div class="toolbar">
+          <input class="filtro" data-tabla="tabla-can" placeholder="filtrar por ID o datos...">
+        </div>
         <table id="tabla-can">
           <thead><tr><th>Visto</th><th>ID</th><th>DLC</th><th>Datos</th></tr></thead>
           <tbody></tbody>
@@ -102,14 +112,16 @@
       </section>
 
       <section data-seccion="alertas" class="oculto">
-        <h2>Alertas activas</h2>
-        <p class="placeholder">Datos simulados -- implementacion en Plan 7.</p>
+        <h2>Alertas activas <span class="cuenta" id="cuenta-alertas">0</span></h2>
         <ul id="lista-alertas"></ul>
       </section>
 
       <section data-seccion="logs" class="oculto">
         <h2>Registro de auditoria</h2>
-        <h3>Feed de eventos en vivo</h3>
+        <h3>Feed de eventos en vivo <span class="cuenta" id="cuenta-eventos">0</span></h3>
+        <div class="toolbar">
+          <input class="filtro" data-tabla="tabla-eventos" placeholder="filtrar por fuente o detalle...">
+        </div>
         <table id="tabla-eventos">
           <thead><tr><th>Hora</th><th>Fuente</th><th>Detalle</th></tr></thead>
           <tbody></tbody>

@@ -56,6 +56,26 @@ header h1 {
 
 .header-estado .sep { opacity: 0.4; }
 
+.btn-pausa {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: system-ui, sans-serif;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btn-pausa:hover { color: var(--text); border-color: var(--accent); }
+
+.btn-pausa.activo {
+  color: var(--warning);
+  border-color: var(--warning);
+  background: rgba(255, 152, 0, 0.1);
+}
+
 .dot {
   width: 9px;
   height: 9px;
@@ -244,6 +264,45 @@ dd {
   background: rgba(244, 67, 54, 0.12);
   color: var(--error);
   border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+/* --- toolbar, filtro y contador --- */
+
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.filtro {
+  flex: 1;
+  max-width: 320px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.7rem;
+  font-family: 'Courier New', monospace;
+}
+
+.filtro:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.filtro::placeholder { color: var(--text-muted); }
+
+.cuenta {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.5rem;
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent);
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
 }
 
 /* --- tablas --- */

@@ -46,6 +46,25 @@ function badge(texto, clase) {
   return '<span class="badge ' + clase + '">' + texto + '</span>';
 }
 
+var filtros = {};
+
+function setCuenta(id, n) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = n;
+}
+
+function aplicarFiltro(tablaId) {
+  var texto = (filtros[tablaId] || '').toLowerCase();
+  var filas = document.querySelectorAll('#' + tablaId + ' tbody tr');
+  var visibles = 0;
+  filas.forEach(function(tr) {
+    var ok = !texto || tr.textContent.toLowerCase().indexOf(texto) >= 0;
+    tr.style.display = ok ? '' : 'none';
+    if (ok) visibles++;
+  });
+  return visibles;
+}
+
 function actualizarConexion(ok) {
   var dot = document.getElementById('conexion-dot');
   var txt = document.getElementById('conexion-texto');
@@ -138,6 +157,7 @@ function rellenarBLE(items) {
     var tr = document.createElement('tr');
     tr.innerHTML = '<td colspan="4">Sin dispositivos detectados</td>';
     tbody.appendChild(tr);
+    setCuenta('cuenta-ble', 0);
     return;
   }
   items.forEach(function(d) {
@@ -149,6 +169,8 @@ function rellenarBLE(items) {
                    '</td><td>' + rssi + '</td><td>' + visto + '</td>';
     tbody.appendChild(tr);
   });
+  setCuenta('cuenta-ble', items.length);
+  aplicarFiltro('tabla-ble');
 }
 
 function cargarBLE() {
@@ -173,6 +195,7 @@ function rellenarModbus(items) {
     var tr = document.createElement('tr');
     tr.innerHTML = '<td colspan="5">Sin trafico en el bus RS485</td>';
     tbody.appendChild(tr);
+    setCuenta('cuenta-modbus', 0);
     return;
   }
   items.forEach(function(d) {
@@ -183,6 +206,8 @@ function rellenarModbus(items) {
                      '</td><td>' + crc + '</td>';
     tbody.appendChild(fila);
   });
+  setCuenta('cuenta-modbus', items.length);
+  aplicarFiltro('tabla-modbus');
 }
 
 function cargarModbus() {
@@ -199,6 +224,7 @@ function rellenarCAN(items) {
     var tr = document.createElement('tr');
     tr.innerHTML = '<td colspan="4">Sin trafico en el bus CAN</td>';
     tbody.appendChild(tr);
+    setCuenta('cuenta-can', 0);
     return;
   }
   items.forEach(function(d) {
@@ -208,6 +234,8 @@ function rellenarCAN(items) {
                      '</td><td>' + d.dlc + '</td><td>' + (d.datos || '') + '</td>';
     tbody.appendChild(fila);
   });
+  setCuenta('cuenta-can', items.length);
+  aplicarFiltro('tabla-can');
 }
 
 function cargarCAN() {
@@ -225,6 +253,7 @@ function rellenarAlertas(items) {
     vacio.className = 'alerta-ok';
     vacio.textContent = 'Sin alertas -- ninguna entidad anomala detectada';
     ul.appendChild(vacio);
+    setCuenta('cuenta-alertas', 0);
     return;
   }
   items.forEach(function(d) {
@@ -233,6 +262,7 @@ function rellenarAlertas(items) {
     li.textContent = '[' + formatearHoraUtc(d.utc) + '] ' + d.nivel + ': ' + d.mensaje;
     ul.appendChild(li);
   });
+  setCuenta('cuenta-alertas', items.length);
 }
 
 function cargarAlertas() {
@@ -249,6 +279,7 @@ function rellenarEventos(items) {
     var tr = document.createElement('tr');
     tr.innerHTML = '<td colspan="3">Sin eventos registrados</td>';
     tbody.appendChild(tr);
+    setCuenta('cuenta-eventos', 0);
     return;
   }
   items.forEach(function(d) {
@@ -258,6 +289,8 @@ function rellenarEventos(items) {
                    '</td><td>' + d.detail + '</td>';
     tbody.appendChild(tr);
   });
+  setCuenta('cuenta-eventos', items.length);
+  aplicarFiltro('tabla-eventos');
 }
 
 function rellenarLogs(data) {
@@ -309,33 +342,53 @@ function leerSeccionDeHash() {
   return hash.replace('#/', '') || 'sistema';
 }
 
+var timers = [];
+var pausado = false;
+
+// Lista de [funcion, intervalo_ms] que se refrescan en vivo.
+var TAREAS = [
+  [cargarStats, 5000], [cargarEstado, 5000], [cargarBLE, 5000],
+  [cargarEventos, 5000], [cargarLogs, 15000], [cargarModbus, 5000],
+  [cargarCAN, 5000], [cargarAlertas, 5000]
+];
+
+function iniciarPolling() {
+  TAREAS.forEach(function(t) {
+    t[0]();
+    timers.push(setInterval(t[0], t[1]));
+  });
+}
+
+function detenerPolling() {
+  timers.forEach(clearInterval);
+  timers = [];
+}
+
+function alternarPausa() {
+  pausado = !pausado;
+  var btn = document.getElementById('btn-pausa');
+  btn.textContent = pausado ? 'Reanudar' : 'Pausar';
+  btn.classList.toggle('activo', pausado);
+  if (pausado) detenerPolling();
+  else iniciarPolling();
+}
+
+function conectarFiltros() {
+  document.querySelectorAll('.filtro').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      filtros[inp.dataset.tabla] = inp.value;
+      aplicarFiltro(inp.dataset.tabla);
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   tickReloj();
   setInterval(tickReloj, 1000);
 
-  cargarStats();
-  setInterval(cargarStats, 5000);
-
-  cargarEstado();
-  setInterval(cargarEstado, 5000);
-
-  cargarBLE();
-  setInterval(cargarBLE, 5000);
-
-  cargarEventos();
-  setInterval(cargarEventos, 5000);
-
-  cargarLogs();
-  setInterval(cargarLogs, 15000);
-
-  cargarModbus();
-  setInterval(cargarModbus, 5000);
-
-  cargarCAN();
-  setInterval(cargarCAN, 5000);
-
-  cargarAlertas();
-  setInterval(cargarAlertas, 5000);
+  conectarFiltros();
+  document.getElementById('btn-pausa').addEventListener('click', alternarPausa);
+  iniciarPolling();
 
   mostrarSeccion(leerSeccionDeHash());
   window.addEventListener('hashchange', function() {
