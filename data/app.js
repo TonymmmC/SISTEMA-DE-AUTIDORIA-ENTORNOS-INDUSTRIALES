@@ -129,6 +129,8 @@ function escHtml(s) {
     .replace(/"/g,'&quot;');
 }
 
+function escAttr(s) { return escHtml(s); }
+
 /* ── CHART: SPARKLINE ───────────────────────────────── */
 
 function buildSparkPaths(data, w, h, pad) {
@@ -444,6 +446,8 @@ function updateSistema() {
   setText('sysm-evcount',   state.events.length);
   setText('sysm-blecount',  Object.keys(state.knownMacs).length);
 
+  scheduleBuildTopology();
+
   // bus status tiles
   var mbN  = s.modbus || 0;
   var canN = s.can    || 0;
@@ -573,6 +577,7 @@ function updateModbus(rows) {
 
   updateKpis();
   updateActivityChart();
+  scheduleBuildTopology();
 }
 
 /* ── CAN ─────────────────────────────────────────────── */
@@ -636,6 +641,7 @@ function updateCan(rows) {
 
   updateKpis();
   updateActivityChart();
+  scheduleBuildTopology();
 }
 
 /* ── ALERTAS ─────────────────────────────────────────── */
@@ -731,6 +737,7 @@ function applyBleData(devs) {
   updateSparkline();
   updateRssiDonuts();
   updateActivityChart();
+  scheduleBuildTopology();
 }
 
 function fetchEvents() {
@@ -770,6 +777,391 @@ function fetchAlertas() {
     .then(function(r){ return r.json(); })
     .then(function(data){ updateAlertas(data); })
     .catch(function(){ if (state.isMock) updateAlertas(MOCK_ALERTAS); });
+}
+
+/* ── TOPOLOGY MAP ────────────────────────────────────── */
+
+var _topoTimer = null;
+var _ttNodeG   = null;
+function scheduleBuildTopology() {
+  clearTimeout(_topoTimer);
+  _topoTimer = setTimeout(buildTopology, 120);
+}
+
+function buildTopology() {
+  var svg = document.getElementById('topo-svg');
+  if (!svg) return;
+
+  svg.setAttribute('viewBox', '0 0 1100 520');
+
+  var CX = 550, CY = 260;
+
+  // Module positions — star layout
+  var bP = {x:195, y:118};
+  var mP = {x:180, y:405};
+  var cP = {x:905, y:168};
+  var sP = {x:820, y:415};
+
+  // ── LINES ─────────────────────────────────────────────
+
+  // Green glowing dotted line with moving dot (center → module)
+  function gline(x1,y1,x2,y2,dur) {
+    var p = 'M'+x1+','+y1+' L'+x2+','+y2;
+    return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+
+      '" stroke="#00ff80" stroke-width="14" stroke-opacity="0.1" stroke-dasharray="9 11" filter="url(#gg)" pointer-events="none"/>'+
+      '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+
+      '" stroke="#3dff8f" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="7 9" pointer-events="none">'+
+      '<animate attributeName="stroke-dashoffset" from="16" to="0" dur="'+dur+'s" repeatCount="indefinite"/></line>'+
+      '<circle r="3.5" fill="#3dff8f" opacity="0.9" pointer-events="none">'+
+        '<animateMotion dur="'+(dur*2.5)+'s" repeatCount="indefinite" path="'+p+'"/>'+
+      '</circle>';
+  }
+
+  // Thin sub-line (module → device)
+  function sline(x1,y1,x2,y2,col,dur) {
+    return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+
+      '" stroke="'+col+'" stroke-width="8" stroke-opacity="0.07" stroke-dasharray="5 9" filter="url(#gg)" pointer-events="none"/>'+
+      '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+
+      '" stroke="'+col+'" stroke-width="1" stroke-opacity="0.4" stroke-dasharray="4 7" pointer-events="none">'+
+      '<animate attributeName="stroke-dashoffset" from="11" to="0" dur="'+dur+'s" repeatCount="indefinite"/></line>';
+  }
+
+  // ── NODES ─────────────────────────────────────────────
+
+  // Equipment module (translates to absolute position)
+  function equipNode(x,y,col,sec,ntype,iconFn,lbl,sub) {
+    var sa  = sec   ? ' data-sec="'+escAttr(sec)+'"'     : '';
+    var nta = ntype ? ' data-ntype="'+escAttr(ntype)+'"' : '';
+    return '<g class="topo-node"'+sa+nta+' transform="translate('+x+','+y+')">'+
+      '<circle r="66" fill="'+col+'" fill-opacity="0.04"/>'+
+      '<circle r="66" fill="none" stroke="'+col+'" stroke-width="0.6" stroke-dasharray="3 10" stroke-opacity="0.32"/>'+
+      '<g filter="url(#mg)"><g transform="scale(1.28)">'+iconFn(col)+'</g></g>'+
+      '<text y="56" text-anchor="middle" fill="'+col+'" font-size="10.5" font-weight="700" font-family="system-ui" letter-spacing="0.5">'+lbl+'</text>'+
+      '<text y="69" text-anchor="middle" fill="#3a4258" font-size="7.5" font-family="Consolas,monospace">'+sub+'</text>'+
+      '</g>';
+  }
+
+  // Device sub-node (small labeled box)
+  function devNode(x,y,lbl,sub,col,sec,ntype,nkey) {
+    var sa  = sec   ? ' data-sec="'+escAttr(sec)+'"'     : '';
+    var nta = ntype ? ' data-ntype="'+escAttr(ntype)+'"' : '';
+    var nka = nkey  ? ' data-nkey="'+escAttr(nkey)+'"'   : '';
+    return '<g class="topo-node"'+sa+nta+nka+' transform="translate('+x+','+y+')">'+
+      '<rect x="-38" y="-17" width="76" height="34" rx="5" fill="rgba(12,15,24,0.97)" stroke="'+col+'" stroke-width="1" stroke-opacity="0.45"/>'+
+      '<circle cx="-27" cy="0" r="2.5" fill="'+col+'" opacity="0.75">'+
+        '<animate attributeName="opacity" values="0.9;0.25;0.9" dur="2.2s" repeatCount="indefinite"/>'+
+      '</circle>'+
+      '<text x="2" y="-4" text-anchor="middle" fill="'+col+'" font-size="7.5" font-weight="600" font-family="Consolas,monospace">'+escHtml(lbl)+'</text>'+
+      '<text x="2" y="7" text-anchor="middle" fill="#3a4258" font-size="6.5" font-family="Consolas,monospace">'+escHtml(sub)+'</text>'+
+      '</g>';
+  }
+
+  // ── ICON PICTOGRAMS (rendered at local 0,0) ───────────
+
+  function iconBLE(col) {
+    return '<rect x="-18" y="-14" width="36" height="26" rx="4" fill="rgba(10,14,22,0.92)" stroke="'+col+'" stroke-width="1.4"/>'+
+      '<line x1="0" y1="-14" x2="0" y2="-29" stroke="'+col+'" stroke-width="1.5"/>'+
+      '<circle cx="0" cy="-32" r="2.5" fill="'+col+'"/>'+
+      '<path d="M-8,-23 Q0,-33 8,-23" fill="none" stroke="'+col+'" stroke-width="1.2" stroke-opacity="0.9"/>'+
+      '<path d="M-14,-19 Q0,-38 14,-19" fill="none" stroke="'+col+'" stroke-width="1" stroke-opacity="0.55"/>'+
+      '<path d="M-20,-15 Q0,-43 20,-15" fill="none" stroke="'+col+'" stroke-width="0.7" stroke-opacity="0.3"/>'+
+      '<circle cx="-7" cy="-4" r="1.8" fill="'+col+'" opacity="0.7"/>'+
+      '<circle cx="0"  cy="-4" r="1.8" fill="'+col+'" opacity="0.7"/>'+
+      '<circle cx="7"  cy="-4" r="1.8" fill="'+col+'" opacity="0.7"/>'+
+      '<text x="0" y="8" text-anchor="middle" fill="'+col+'" font-size="5.5" font-family="Consolas">NimBLE</text>';
+  }
+
+  function iconMB(col) {
+    return '<rect x="-20" y="-18" width="40" height="34" rx="3" fill="rgba(10,14,22,0.92)" stroke="'+col+'" stroke-width="1.4"/>'+
+      '<rect x="-16" y="-14" width="32" height="10" rx="2" fill="rgba(22,28,42,0.8)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
+      '<circle cx="-11" cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
+      '<circle cx="-6"  cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
+      '<circle cx="-1"  cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
+      '<circle cx="4"   cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
+      '<circle cx="9"   cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
+      '<rect x="-12" y="0" width="24" height="8" rx="1.5" fill="rgba(22,28,42,0.8)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
+      '<circle cx="12" cy="10" r="3" fill="'+col+'">'+
+        '<animate attributeName="opacity" values="0.9;0.25;0.9" dur="0.9s" repeatCount="indefinite"/>'+
+      '</circle>'+
+      '<text x="-3" y="16" text-anchor="middle" fill="'+col+'" font-size="5.5" font-family="Consolas">RS-485</text>';
+  }
+
+  function iconCAN(col) {
+    return '<rect x="-20" y="-16" width="40" height="32" rx="4" fill="rgba(10,14,22,0.92)" stroke="'+col+'" stroke-width="1.4"/>'+
+      '<rect x="-14" y="-11" width="28" height="12" rx="2" fill="rgba(22,28,42,0.8)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
+      '<circle cx="-9" cy="-5" r="1.8" fill="'+col+'" opacity="0.8"/>'+
+      '<circle cx="-3" cy="-5" r="1.8" fill="'+col+'" opacity="0.8"/>'+
+      '<circle cx="3"  cy="-5" r="1.8" fill="'+col+'" opacity="0.8"/>'+
+      '<circle cx="9"  cy="-5" r="1.8" fill="'+col+'" opacity="0.8"/>'+
+      '<circle cx="-9" cy="7" r="2.5" fill="'+col+'">'+
+        '<animate attributeName="opacity" values="1;0.3;1" dur="0.65s" repeatCount="indefinite"/>'+
+      '</circle>'+
+      '<circle cx="-1" cy="7" r="2.5" fill="#22c55e">'+
+        '<animate attributeName="opacity" values="1;0.3;1" dur="0.85s" begin="0.3s" repeatCount="indefinite"/>'+
+      '</circle>'+
+      '<text x="5" y="12" text-anchor="middle" fill="'+col+'" font-size="5.5" font-family="Consolas">TWAI</text>';
+  }
+
+  function iconSD(col) {
+    return '<path d="M-14,-20 L-14,17 L14,17 L14,-13 L7,-20 Z" fill="rgba(10,14,22,0.92)" stroke="'+col+'" stroke-width="1.4"/>'+
+      '<line x1="-8" y1="17" x2="-8" y2="8" stroke="'+col+'" stroke-width="1.5"/>'+
+      '<line x1="-4" y1="17" x2="-4" y2="8" stroke="'+col+'" stroke-width="1.5"/>'+
+      '<line x1="0"  y1="17" x2="0"  y2="8" stroke="'+col+'" stroke-width="1.5"/>'+
+      '<line x1="4"  y1="17" x2="4"  y2="8" stroke="'+col+'" stroke-width="1.5"/>'+
+      '<line x1="8"  y1="17" x2="8"  y2="8" stroke="'+col+'" stroke-width="1.5"/>'+
+      '<circle cx="0" cy="-3" r="5" fill="'+col+'" fill-opacity="0.12" stroke="'+col+'" stroke-width="0.7"/>'+
+      '<circle cx="0" cy="-3" r="2.5" fill="'+col+'">'+
+        '<animate attributeName="opacity" values="0.9;0.3;0.9" dur="2.5s" repeatCount="indefinite"/>'+
+      '</circle>';
+  }
+
+  // ── DEVICE SUB-NODES FROM STATE ───────────────────────
+
+  var bAbsPos = [{x:58,y:52},{x:55,y:165},{x:58,y:272}];
+  var bleNodes = state.bleDevices.slice(0,3).map(function(d,i){
+    return {x:bAbsPos[i].x, y:bAbsPos[i].y, lbl:d.mac.slice(-8), sub:d.rssi+' dBm', ntype:'dev-ble', nkey:d.mac};
+  });
+
+  var mAbsPos = [{x:45,y:305},{x:42,y:378},{x:45,y:455},{x:170,y:490},{x:295,y:483}];
+  var mbNodes = Object.keys(state.mbAccum).slice(0,5).map(function(k,i){
+    return {x:mAbsPos[i].x, y:mAbsPos[i].y, lbl:k, sub:state.mbAccum[k]+' tr', ntype:'dev-mb', nkey:k};
+  });
+
+  var cAbsPos = [{x:1012,y:72},{x:1032,y:170},{x:1022,y:270},{x:992,y:360}];
+  var canNodes = Object.keys(state.canAccum).slice(0,4).map(function(k,i){
+    return {x:cAbsPos[i].x, y:cAbsPos[i].y, lbl:k.length>9?k.slice(0,9):k, sub:state.canAccum[k]+' tr', ntype:'dev-can', nkey:k};
+  });
+
+  var sdOk  = state.sdInfo && state.sdInfo.sd;
+  var sdCol = sdOk ? '#22c55e' : '#3a4258';
+  var ip    = (state.status && state.status.ip) ? state.status.ip : '--';
+
+  // ── BUILD SVG ─────────────────────────────────────────
+
+  var buf = '<defs>'+
+    '<pattern id="fg" width="55" height="55" patternUnits="userSpaceOnUse">'+
+      '<path d="M55 0L0 0 0 55" fill="none" stroke="#131208" stroke-width="0.55"/>'+
+    '</pattern>'+
+    // Glow filter (for connection lines + icon halos)
+    '<filter id="gg" x="-60%" y="-60%" width="220%" height="220%">'+
+      '<feGaussianBlur stdDeviation="5" result="b"/>'+
+      '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'+
+    '</filter>'+
+    // Module glow filter
+    '<filter id="mg" x="-55%" y="-55%" width="210%" height="210%">'+
+      '<feGaussianBlur stdDeviation="4" result="b"/>'+
+      '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'+
+    '</filter>'+
+    '</defs>'+
+    // Background
+    '<rect width="1100" height="520" fill="#07080e"/>'+
+    '<rect width="1100" height="520" fill="url(#fg)"/>'+
+    // Zone ellipses (like floor markings) — pointer-events none: decorativas
+    '<ellipse cx="195" cy="118" rx="90" ry="72" fill="none" stroke="#1c1400" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
+    '<ellipse cx="180" cy="405" rx="90" ry="72" fill="none" stroke="#1c1400" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
+    '<ellipse cx="905" cy="168" rx="90" ry="70" fill="none" stroke="#101528" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
+    '<ellipse cx="820" cy="415" rx="78" ry="60" fill="none" stroke="#0e1a10" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
+    // Floor zone labels
+    '<text x="115"  y="22"  fill="#191200" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA BLE</text>'+
+    '<text x="55"   y="515" fill="#191200" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA RS-485</text>'+
+    '<text x="820"  y="22"  fill="#0e1428" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA CAN</text>';
+
+  // Green connection lines (drawn behind everything)
+  buf += gline(CX,CY, bP.x,bP.y, 1.1);
+  buf += gline(CX,CY, mP.x,mP.y, 1.4);
+  buf += gline(CX,CY, cP.x,cP.y, 0.95);
+  buf += gline(CX,CY, sP.x,sP.y, 1.7);
+
+  // Sub-lines: module → devices
+  bleNodes.forEach(function(d){ buf += sline(bP.x,bP.y, d.x,d.y, '#2dd4bf', 1.4); });
+  mbNodes.forEach(function(d){  buf += sline(mP.x,mP.y, d.x,d.y, '#f59e0b', 1.7); });
+  canNodes.forEach(function(d){ buf += sline(cP.x,cP.y, d.x,d.y, '#4a9eff', 1.2); });
+
+  // Device sub-nodes
+  bleNodes.forEach(function(d){ buf += devNode(d.x,d.y, d.lbl,d.sub, '#2dd4bf', 'ble',    d.ntype, d.nkey); });
+  mbNodes.forEach(function(d){  buf += devNode(d.x,d.y, d.lbl,d.sub, '#f59e0b', 'modbus', d.ntype, d.nkey); });
+  canNodes.forEach(function(d){ buf += devNode(d.x,d.y, d.lbl,d.sub, '#4a9eff', 'can',    d.ntype, d.nkey); });
+
+  // Module equipment nodes (on top of lines and sub-nodes)
+  buf += equipNode(bP.x,bP.y, '#2dd4bf', 'ble',    'mod-ble', iconBLE, 'BLE Scanner', 'NimBLE · Core 0');
+  buf += equipNode(mP.x,mP.y, '#f59e0b', 'modbus', 'mod-mb',  iconMB,  'Modbus RTU',  'RS-485 · 9600bd');
+  buf += equipNode(cP.x,cP.y, '#4a9eff', 'can',    'mod-can', iconCAN, 'CAN Bus',     'TWAI · 500kbps');
+  buf += equipNode(sP.x,sP.y, sdCol,     'logs',   'mod-sd',  iconSD,  'microSD',     sdOk ? 'SD presente' : 'Sin microSD');
+
+  // Center EDGE101 gateway box
+  buf += '<g class="topo-node" data-ntype="center" data-sec="" transform="translate('+CX+','+CY+')">'+
+    '<circle r="95" fill="rgba(74,158,255,0.04)" stroke="#4a9eff" stroke-width="0.7" stroke-dasharray="3 8" stroke-opacity="0.42"/>'+
+    // Glowing box frame (blurred) — escalado ~1.28x vs viewBox anterior
+    '<g filter="url(#mg)">'+
+      '<rect x="-67" y="-38" width="134" height="76" rx="9" fill="rgba(8,10,18,0.97)" stroke="#4a9eff" stroke-width="2.5"/>'+
+      '<path d="M-67,-38 L-60,-51 L74,-51 L67,-38 Z" fill="#0b1524" stroke="#4a9eff" stroke-width="1"/>'+
+    '</g>'+
+    // Ports + LED (no filter → crisp)
+    '<rect x="-49" y="-26" width="11" height="9" rx="2" fill="#4a9eff" opacity="0.55"/>'+
+    '<rect x="-33" y="-26" width="11" height="9" rx="2" fill="#4a9eff" opacity="0.55"/>'+
+    '<rect x="-17" y="-26" width="11" height="9" rx="2" fill="#4a9eff" opacity="0.55"/>'+
+    '<rect x="-1"  y="-26" width="11" height="9" rx="2" fill="#4a9eff" opacity="0.55"/>'+
+    '<circle cx="37" cy="-18" r="5" fill="#22c55e">'+
+      '<animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>'+
+    '</circle>'+
+    '<text y="9"  text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="system-ui" letter-spacing="1">EDGE101</text>'+
+    '<text y="26" text-anchor="middle" fill="#4a9eff" font-size="10" font-family="system-ui" letter-spacing="0.5">AUDITOR IIoT</text>'+
+    '<text y="54" text-anchor="middle" fill="#3a4258" font-size="9" font-family="Consolas,monospace">'+escHtml(ip)+'</text>'+
+    '</g>';
+
+  svg.innerHTML = buf;
+
+  // ── CLICK ─────────────────────────────────────────────
+  svg.onclick = function(e) {
+    var t = e.target;
+    while (t && t !== svg) {
+      if (t.getAttribute && t.getAttribute('data-sec')) {
+        var s = t.getAttribute('data-sec');
+        if (s) { window.location.hash = '#/' + s; navTo(s); }
+        return;
+      }
+      t = t.parentNode;
+    }
+  };
+
+  // ── TOOLTIP FLOTANTE ──────────────────────────────────
+  var tooltip = document.getElementById('topo-tooltip');
+  if (!tooltip) return;
+
+  _ttNodeG = null;
+
+  svg.onmousemove = function(e) {
+    var t = e.target;
+    var nodeG = null;
+    while (t && t !== svg) {
+      if (t.getAttribute && t.getAttribute('data-ntype')) { nodeG = t; break; }
+      t = t.parentNode;
+    }
+    if (!nodeG || nodeG === _ttNodeG) return;
+    _ttNodeG = nodeG;
+
+    var content = buildTooltipContent(
+      nodeG.getAttribute('data-ntype')||'',
+      nodeG.getAttribute('data-nkey') ||''
+    );
+    if (!content) { tooltip.classList.add('oculto'); return; }
+
+    tooltip.innerHTML = content;
+    tooltip.classList.remove('oculto');
+
+    // Posición anclada al centro del nodo (coords SVG → pixeles display)
+    var svgRect = svg.getBoundingClientRect();
+    var scale   = svgRect.width / 1100;
+    var tfm = nodeG.getAttribute('transform') || '';
+    var mt  = tfm.match(/translate\(([^,)]+)[,\s]+([^)]+)\)/);
+    var cx  = mt ? parseFloat(mt[1]) * scale : e.clientX - svgRect.left;
+    var cy  = mt ? parseFloat(mt[2]) * scale : e.clientY - svgRect.top;
+
+    var ttW = 265, ttH = 200, gap = 62;
+    var tx = cx + gap;
+    var ty = cy - 80;
+    if (tx + ttW > svgRect.width)  tx = cx - ttW - gap;
+    if (ty + ttH > svgRect.height) ty = svgRect.height - ttH - 8;
+    if (ty < 4) ty = 4;
+    if (tx < 4) tx = 4;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top  = ty + 'px';
+  };
+
+  svg.onmouseleave = function() {
+    tooltip.classList.add('oculto');
+    _ttNodeG = null;
+  };
+}
+
+/* ── TOPOLOGY TOOLTIP CONTENT ───────────────────────── */
+
+function ttRow(lbl, val) {
+  return '<div class="topo-tt-row"><span class="topo-tt-lbl">'+escHtml(lbl)+'</span>'+
+    '<span class="topo-tt-val">'+escHtml(String(val))+'</span></div>';
+}
+function ttHtml(title, col, rows) {
+  return '<div class="topo-tt-title" style="color:'+col+'">'+escHtml(title)+'</div>'+rows.join('');
+}
+
+function buildTooltipContent(ntype, nkey) {
+  switch (ntype) {
+    case 'center': {
+      var s = state.status || {};
+      var buses = [];
+      if (state.bleDevices.length) buses.push('BLE');
+      if (Object.keys(state.mbAccum).length) buses.push('Modbus');
+      if (Object.keys(state.canAccum).length) buses.push('CAN');
+      return ttHtml('EDGE101 Auditor IIoT','#4a9eff',[
+        ttRow('IP', s.ip||'--'),
+        ttRow('Heap', s.free_heap ? fmtHeapKB(s.free_heap)+' libre' : '--'),
+        ttRow('Uptime', fmtUptime(s.uptime_s||0)),
+        ttRow('Buses', buses.join(' · ')||'iniciando…'),
+      ]);
+    }
+    case 'mod-ble': {
+      var devs = state.bleDevices;
+      var avg = devs.length ? Math.round(devs.reduce(function(a,d){return a+d.rssi;},0)/devs.length) : '--';
+      return ttHtml('BLE Scanner','#2dd4bf',[
+        ttRow('Activos',    devs.length+' dispositivos'),
+        ttRow('Sesión',     Object.keys(state.knownMacs).length+' MACs únicas'),
+        ttRow('Señal media',avg+' dBm'),
+        ttRow('Modo',       'Pasivo · Core 0'),
+      ]);
+    }
+    case 'mod-mb':
+      return ttHtml('Modbus RTU','#f59e0b',[
+        ttRow('Tramas',   state.mbStats.total+' en buffer'),
+        ttRow('Esclavos', Object.keys(state.mbAccum).length+' detectados'),
+        ttRow('Bus',      'RS-485 @ 9600 baud'),
+        ttRow('Modo',     'Listen-only · Core 1'),
+      ]);
+    case 'mod-can':
+      return ttHtml('CAN Bus','#4a9eff',[
+        ttRow('Tramas',    state.canStats.total+' en buffer'),
+        ttRow('IDs únicos',Object.keys(state.canAccum).length),
+        ttRow('Std / Ext', (state.canStats.stdCount||0)+' / '+(state.canStats.extCount||0)),
+        ttRow('Modo',      'TWAI · 500kbps · Core 1'),
+      ]);
+    case 'mod-sd': {
+      var sdOk2 = state.sdInfo && state.sdInfo.sd;
+      var arch  = sdOk2 ? (state.sdInfo.archivos||[]) : [];
+      var kb    = (arch.reduce(function(a,f){return a+(f.bytes||0);},0)/1024).toFixed(1);
+      return ttHtml('microSD', sdOk2?'#22c55e':'#636b80',[
+        ttRow('Estado',   sdOk2?'Presente':'No detectada'),
+        ttRow('Archivos', arch.length),
+        ttRow('Usado',    sdOk2?kb+' KB':'--'),
+        ttRow('Sistema',  'LittleFS + FAT32'),
+      ]);
+    }
+    case 'dev-ble': {
+      var dev = null;
+      state.bleDevices.forEach(function(d){ if (d.mac===nkey) dev=d; });
+      if (!dev) return '';
+      var qi = rssiInfo(dev.rssi);
+      return ttHtml('Dispositivo BLE','#2dd4bf',[
+        ttRow('MAC',    dev.mac),
+        ttRow('Nombre', dev.nombre||'sin nombre'),
+        ttRow('RSSI',   dev.rssi+' dBm — '+qi.label),
+        ttRow('Visto',  fmtVisto(dev.visto_ms||0)),
+      ]);
+    }
+    case 'dev-mb':
+      return ttHtml('Esclavo Modbus','#f59e0b',[
+        ttRow('ID',     nkey),
+        ttRow('Tramas', (state.mbAccum[nkey]||0)+' capturadas'),
+        ttRow('Bus',    'RS-485 listen-only'),
+      ]);
+    case 'dev-can': {
+      var proto = (nkey.length>6)?'J1939 · ext 29b':'CANopen · std 11b';
+      return ttHtml('Nodo CAN','#4a9eff',[
+        ttRow('ID',        nkey),
+        ttRow('Tramas',    (state.canAccum[nkey]||0)+' capturadas'),
+        ttRow('Protocolo', proto),
+      ]);
+    }
+  }
+  return '';
 }
 
 /* ── PRE-POPULATE MOCK HISTORIES ────────────────────── */
