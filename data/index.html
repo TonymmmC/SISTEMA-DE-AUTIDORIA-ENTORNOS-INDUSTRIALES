@@ -24,6 +24,20 @@
         <div class="brand-ip" id="header-ip">--</div>
       </div>
     </div>
+    <div class="topbar-center">
+      <div class="bus-pill bus-pill--ble">
+        <span class="pill-dot"></span>BLE
+        <span class="pill-n" id="pill-ble-n">0</span>
+      </div>
+      <div class="bus-pill bus-pill--mb">
+        <span class="pill-dot"></span>Modbus
+        <span class="pill-n" id="pill-mb-n">0</span>
+      </div>
+      <div class="bus-pill bus-pill--can">
+        <span class="pill-dot"></span>CAN
+        <span class="pill-n" id="pill-can-n">0</span>
+      </div>
+    </div>
     <div class="topbar-right">
       <span id="modo-local" class="mock-badge oculto">modo local</span>
       <div class="conn-wrap">
@@ -44,6 +58,7 @@
       </a>
       <a href="#/eventos" data-link class="nav-item">
         <span class="ni">≡</span><span class="nl">Eventos</span>
+        <span class="nav-chip" id="nav-ev-chip"></span>
       </a>
       <a href="#/alertas" data-link class="nav-item">
         <span class="ni">⚠</span><span class="nl">Alertas</span>
@@ -70,20 +85,35 @@
 
       <!-- ── OVERVIEW ─────────────────────────────────────── -->
       <section data-sec="overview">
-        <div class="kpi-row">
-          <div class="kpi-card kpi-card--ble">
+        <div class="kpi-row kpi-row--6">
+          <div class="kpi-card kpi-card--teal">
+            <div class="kpi-icon" style="color:var(--teal)">◎</div>
             <div class="kpi-val" id="k-ble-activos">--</div>
             <div class="kpi-lbl">BLE activos</div>
             <div class="kpi-sub">últimos 2 min</div>
           </div>
           <div class="kpi-card">
+            <div class="kpi-icon" style="color:var(--muted)">◉</div>
             <div class="kpi-val" id="k-ble-total">--</div>
-            <div class="kpi-lbl">Detectados (sesión)</div>
-            <div class="kpi-sub">MACs únicas vistas</div>
+            <div class="kpi-lbl">MACs únicas</div>
+            <div class="kpi-sub">en sesión</div>
+          </div>
+          <div class="kpi-card kpi-card--amber">
+            <div class="kpi-icon" style="color:var(--warn)">≈</div>
+            <div class="kpi-val" id="k-mb-frames">--</div>
+            <div class="kpi-lbl">Tramas Modbus</div>
+            <div class="kpi-sub">en buffer</div>
+          </div>
+          <div class="kpi-card kpi-card--blue">
+            <div class="kpi-icon" style="color:var(--accent)">⊡</div>
+            <div class="kpi-val" id="k-can-frames">--</div>
+            <div class="kpi-lbl">Tramas CAN</div>
+            <div class="kpi-sub">en buffer</div>
           </div>
           <div class="kpi-card">
+            <div class="kpi-icon" style="color:var(--muted)">≡</div>
             <div class="kpi-val" id="k-eventos">--</div>
-            <div class="kpi-lbl">Eventos capturados</div>
+            <div class="kpi-lbl">Eventos</div>
             <div class="kpi-sub">en buffer</div>
           </div>
           <div class="kpi-card">
@@ -93,25 +123,56 @@
           </div>
         </div>
 
-        <div class="charts-row">
-          <div class="chart-card">
-            <div class="chart-lbl">Dispositivos BLE en el tiempo <span class="chart-sub" id="sp-range"></span></div>
-            <svg class="sparkline" id="sp-ble" viewBox="0 0 300 52" preserveAspectRatio="none">
+        <div class="ov-main-row">
+          <div class="chart-card chart-card--grow">
+            <div class="chart-hdr">
+              <div class="chart-lbl">Actividad de buses en el tiempo</div>
+              <div class="chart-legend">
+                <span class="leg-item"><span class="leg-dot" style="background:var(--teal)"></span>BLE</span>
+                <span class="leg-item"><span class="leg-dot" style="background:var(--warn)"></span>Modbus</span>
+                <span class="leg-item"><span class="leg-dot" style="background:var(--accent)"></span>CAN</span>
+              </div>
+            </div>
+            <svg class="act-svg" id="act-chart" viewBox="0 0 400 72" preserveAspectRatio="none">
               <defs>
-                <linearGradient id="sp-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.25"/>
-                  <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+                <linearGradient id="g-ble" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="g-mb" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="g-can" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#4a9eff" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#4a9eff" stop-opacity="0"/>
                 </linearGradient>
               </defs>
-              <path id="sp-area" fill="url(#sp-grad)"/>
-              <path id="sp-line" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+              <path id="act-ble-area" fill="url(#g-ble)"/>
+              <path id="act-mb-area"  fill="url(#g-mb)"/>
+              <path id="act-can-area" fill="url(#g-can)"/>
+              <path id="act-ble" fill="none" stroke="#2dd4bf" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+              <path id="act-mb"  fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+              <path id="act-can" fill="none" stroke="#4a9eff" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
             </svg>
           </div>
           <div class="chart-card">
-            <div class="chart-lbl">Distribución de señal</div>
-            <div class="rssi-dist" id="rssi-dist">
-              <div class="rssi-empty">Sin datos BLE</div>
+            <div class="chart-lbl">Señal BLE</div>
+            <div class="donut-wrap">
+              <svg id="rssi-donut" viewBox="0 0 120 120" width="108" height="108"></svg>
+              <div id="donut-legend" class="donut-legend"></div>
             </div>
+          </div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-lbl">Esclavos Modbus <span class="chart-sub">actividad acumulada</span></div>
+            <div id="ov-mb-bars"><div class="rssi-empty">Esperando tramas...</div></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-lbl">CAN <span class="chart-sub">IDs activos</span></div>
+            <div id="ov-can-bars"><div class="rssi-empty">Esperando tramas...</div></div>
           </div>
         </div>
 
@@ -129,6 +190,28 @@
           </div>
           <span class="update-ts" id="ble-ts"></span>
         </div>
+        <div class="charts-row" style="margin-bottom:.875rem">
+          <div class="chart-card">
+            <div class="chart-lbl">Dispositivos activos — historial <span class="chart-sub" id="sp-range"></span></div>
+            <svg class="sparkline" id="sp-ble" viewBox="0 0 300 52" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sp-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path id="sp-area" fill="url(#sp-grad)"/>
+              <path id="sp-line" fill="none" stroke="var(--teal)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="chart-card">
+            <div class="chart-lbl">Distribución de señal (RSSI)</div>
+            <div class="donut-wrap">
+              <svg id="ble-rssi-donut" viewBox="0 0 120 120" width="108" height="108"></svg>
+              <div id="ble-donut-legend" class="donut-legend"></div>
+            </div>
+          </div>
+        </div>
         <div class="dev-list" id="dev-list">
           <div class="empty-state">Esperando datos del scanner...</div>
         </div>
@@ -140,6 +223,7 @@
           <span class="sec-title">Feed de auditoría</span>
           <span class="count-chip" id="ev-chip">0</span>
         </div>
+        <div class="ev-src-row" id="ev-src-row"></div>
         <ul class="ev-feed ev-feed--full" id="ev-feed">
           <li class="ev-empty">Sin eventos registrados</li>
         </ul>
@@ -180,16 +264,93 @@
             </div>
           </div>
         </div>
+        <div class="sys-metrics-row" style="margin-top:1rem;margin-bottom:1.25rem">
+          <div class="sysm-card">
+            <div class="sysm-lbl">Memoria usada</div>
+            <div class="sysm-gauge" id="sysm-heap-gauge">
+              <div class="sysm-gauge-fill" id="sysm-heap-fill"></div>
+            </div>
+            <div class="sysm-vals">
+              <span id="sysm-heap-used">--</span>
+              <span class="sysm-of">de 320 KB</span>
+            </div>
+          </div>
+          <div class="sysm-card">
+            <div class="sysm-lbl">Eventos capturados</div>
+            <div class="sysm-big" id="sysm-evcount">--</div>
+            <div class="sysm-sub">en sesión actual</div>
+          </div>
+          <div class="sysm-card">
+            <div class="sysm-lbl">Dispositivos BLE vistos</div>
+            <div class="sysm-big" id="sysm-blecount">--</div>
+            <div class="sysm-sub">MACs únicas</div>
+          </div>
+        </div>
+        <div class="sys-lbl" style="margin-bottom:.75rem">Módulos activos</div>
+        <div class="sys-bus-row">
+          <div class="sys-bus-card sys-bus-card--ble">
+            <div class="sbc-icon">◎</div>
+            <div class="sbc-body">
+              <div class="sbc-lbl">BLE Scanner</div>
+              <div class="sbc-val" id="sb-ble">--</div>
+              <div class="sbc-sub">Core 0 · Pasivo · NimBLE</div>
+            </div>
+          </div>
+          <div class="sys-bus-card sys-bus-card--mb">
+            <div class="sbc-icon">≈</div>
+            <div class="sbc-body">
+              <div class="sbc-lbl">Modbus RTU</div>
+              <div class="sbc-val" id="sb-mb">--</div>
+              <div class="sbc-sub">Core 1 · Listen-only · RS-485</div>
+            </div>
+          </div>
+          <div class="sys-bus-card sys-bus-card--can">
+            <div class="sbc-icon">⊡</div>
+            <div class="sbc-body">
+              <div class="sbc-lbl">CAN Bus</div>
+              <div class="sbc-val" id="sb-can">--</div>
+              <div class="sbc-sub">Core 1 · TWAI · 500 kbps</div>
+            </div>
+          </div>
+          <div class="sys-bus-card">
+            <div class="sbc-icon" style="color:var(--muted)">⊟</div>
+            <div class="sbc-body">
+              <div class="sbc-lbl">Storage</div>
+              <div class="sbc-val" id="sb-sd">--</div>
+              <div class="sbc-sub">LittleFS + microSD</div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- ── LOGS SD ─────────────────────────────────────── -->
       <section data-sec="logs" class="oculto">
-        <div class="sec-title" style="margin-bottom:1.25rem">Archivos de auditoría — microSD</div>
-        <div class="status-banner status-banner--warn oculto" id="sd-missing">
-          <span class="sb-dot"></span>
-          microSD no presente — los eventos no se persisten en disco
+        <div class="sec-title" style="margin-bottom:1rem">Almacenamiento — microSD</div>
+        <div class="disk-card" id="disk-card">
+          <div class="disk-icon">
+            <svg viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="8" width="32" height="28" rx="3"/>
+              <rect x="4" y="8" width="32" height="10" rx="2"/>
+              <circle cx="30" cy="28" r="4"/>
+              <line x1="8" y1="12" x2="20" y2="12"/>
+              <line x1="8" y1="15" x2="16" y2="15"/>
+            </svg>
+          </div>
+          <div class="disk-body">
+            <div class="disk-header">
+              <span class="disk-name">microSD — Auditoría Edge101</span>
+              <span class="disk-status" id="disk-status-badge">--</span>
+            </div>
+            <div class="disk-bar-track">
+              <div class="disk-bar-fill" id="disk-bar-fill"></div>
+            </div>
+            <div class="disk-meta">
+              <span id="disk-used">-- KB usados</span>
+              <span id="disk-files">-- archivos</span>
+            </div>
+          </div>
         </div>
-        <table id="t-logs" class="oculto">
+        <table id="t-logs" class="oculto" style="margin-top:.875rem">
           <thead><tr><th>Archivo</th><th>Tamaño</th><th>Descarga</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -203,6 +364,20 @@
             <span class="count-chip" id="al-chip">0</span>
           </div>
         </div>
+        <div class="al-summary-row">
+          <div class="al-sum-card al-sum-card--warn">
+            <div class="al-sum-val" id="al-n-warn">0</div>
+            <div class="al-sum-lbl">Advertencia</div>
+          </div>
+          <div class="al-sum-card al-sum-card--crit">
+            <div class="al-sum-val" id="al-n-crit">0</div>
+            <div class="al-sum-lbl">Crítico</div>
+          </div>
+          <div class="al-sum-card al-sum-card--ok">
+            <div class="al-sum-val" id="al-n-ok">--</div>
+            <div class="al-sum-lbl">Sin alertas activas</div>
+          </div>
+        </div>
         <ul class="ev-feed ev-feed--full" id="al-feed">
           <li class="ev-empty">Sin alertas registradas</li>
         </ul>
@@ -214,7 +389,18 @@
           <div class="sec-hdr-left">
             <span class="sec-title">Tráfico Modbus RTU</span>
             <span class="count-chip" id="mb-chip">0</span>
-            <span class="live-dot" title="escuchando en modo pasivo"></span>
+            <span class="live-dot" title="sniffer pasivo activo en RS-485"></span>
+          </div>
+          <span class="rate-badge" id="mb-rate"></span>
+        </div>
+        <div class="charts-row" style="margin-bottom:.875rem">
+          <div class="chart-card">
+            <div class="chart-lbl">Actividad por esclavo</div>
+            <div id="mb-slave-bars"><div class="rssi-empty">Sin datos</div></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-lbl">Distribución de función RTU</div>
+            <div id="mb-fc-bars"><div class="rssi-empty">Sin datos</div></div>
           </div>
         </div>
         <div class="status-banner oculto" id="mb-idle">
@@ -233,7 +419,21 @@
           <div class="sec-hdr-left">
             <span class="sec-title">Tráfico CAN Bus</span>
             <span class="count-chip" id="can-chip">0</span>
-            <span class="live-dot" title="escuchando en modo listen-only"></span>
+            <span class="live-dot" title="listener TWAI listen-only"></span>
+          </div>
+          <span class="rate-badge" id="can-rate"></span>
+        </div>
+        <div class="charts-row" style="margin-bottom:.875rem">
+          <div class="chart-card">
+            <div class="chart-lbl">IDs más frecuentes</div>
+            <div id="can-id-bars"><div class="rssi-empty">Sin datos</div></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-lbl">Tipo de trama</div>
+            <div class="donut-wrap">
+              <svg id="can-proto-donut" viewBox="0 0 120 120" width="108" height="108"></svg>
+              <div id="can-proto-legend" class="donut-legend"></div>
+            </div>
           </div>
         </div>
         <div class="status-banner oculto" id="can-idle">

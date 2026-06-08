@@ -1,8 +1,9 @@
 /* ── MOCK DATA ──────────────────────────────────────── */
 
 var MOCK_STATUS = {
-  device: 'Edge101 Auditor', version: '0.1.0-dev', build: 'local-dev',
-  uptime_s: 3725, free_heap: 218240, ip: '192.168.1.101'
+  device: 'Edge101 Auditor', version: '0.1.0', build: 'Jun 08 2026',
+  uptime_s: 4812, free_heap: 218240, ip: '192.168.1.101',
+  ble: 6, modbus: 6, modbus_valid: 6, can: 6, sd: false
 };
 
 var MOCK_BLE = [
@@ -15,39 +16,56 @@ var MOCK_BLE = [
 ];
 
 var MOCK_EVENTS = [
-  { utc:0, uptime_ms:245000, source:'ble', detail:'MAC=AA:BB:CC:11:22:33 name=Smartphone rssi=-38' },
-  { utc:0, uptime_ms:230000, source:'ble', detail:'MAC=11:22:AB:CD:EF:10 name=Tablet rssi=-81' },
-  { utc:0, uptime_ms:198000, source:'ble', detail:'MAC=DE:AD:BE:EF:00:01 name=Beacon Sala rssi=-56' },
-  { utc:0, uptime_ms:175000, source:'ble', detail:'MAC=55:44:33:22:11:00 name=Sensor Temperatura rssi=-62' },
-  { utc:0, uptime_ms:120000, source:'ble', detail:'MAC=F0:E1:D2:C3:B4:A5 name=- rssi=-74' },
-  { utc:0, uptime_ms:85000,  source:'ble', detail:'MAC=99:88:77:66:55:44 name=- rssi=-91' },
+  { utc:0, uptime_ms:245000, source:'ble',    detail:'MAC=AA:BB:CC:11:22:33 name=Smartphone rssi=-38' },
+  { utc:0, uptime_ms:244200, source:'modbus', detail:'slave=5 fc=0x06 len=8' },
+  { utc:0, uptime_ms:243800, source:'can',    detail:'id=0x181 dlc=6 ext=0' },
+  { utc:0, uptime_ms:243100, source:'can',    detail:'id=0x18F00400 dlc=8 ext=1' },
+  { utc:0, uptime_ms:242000, source:'modbus', detail:'slave=1 fc=0x04 len=8' },
+  { utc:0, uptime_ms:240500, source:'ble',    detail:'MAC=11:22:AB:CD:EF:10 name=Tablet rssi=-81' },
+  { utc:0, uptime_ms:239200, source:'modbus', detail:'slave=3 fc=0x03 len=8' },
+  { utc:0, uptime_ms:238600, source:'can',    detail:'id=0x182 dlc=4 ext=0' },
+  { utc:0, uptime_ms:237000, source:'modbus', detail:'slave=7 fc=0x03 len=8' },
+  { utc:0, uptime_ms:235000, source:'ble',    detail:'MAC=DE:AD:BE:EF:00:01 name=Beacon rssi=-56' },
+  { utc:0, uptime_ms:233400, source:'can',    detail:'id=0x18FE0900 dlc=8 ext=1' },
+  { utc:0, uptime_ms:231000, source:'modbus', detail:'slave=2 fc=0x04 len=8' },
+  { utc:0, uptime_ms:229000, source:'can',    detail:'id=0x701 dlc=1 ext=0' },
+  { utc:0, uptime_ms:225000, source:'modbus', detail:'slave=5 fc=0x01 len=8' },
+  { utc:0, uptime_ms:220000, source:'ble',    detail:'MAC=55:44:33:22:11:00 name=Sensor rssi=-62' },
 ];
 
-var MOCK_LOGS = { sd: false, archivos: [] };
-
 var MOCK_MODBUS = [
-  { slave: 3,  function: 3, len: 8, crc_ok: true,  visto_ms: 2000  },
-  { slave: 7,  function: 6, len: 8, crc_ok: true,  visto_ms: 14000 },
-  { slave: 12, function: 3, len: 8, crc_ok: false, visto_ms: 60000 }
+  { slave:1, function:4, len:8, crc_ok:true, visto_ms:600  },
+  { slave:2, function:4, len:8, crc_ok:true, visto_ms:950  },
+  { slave:3, function:3, len:8, crc_ok:true, visto_ms:1100 },
+  { slave:5, function:1, len:8, crc_ok:true, visto_ms:400  },
+  { slave:7, function:3, len:8, crc_ok:true, visto_ms:1900 },
+  { slave:5, function:6, len:8, crc_ok:true, visto_ms:4800 },
 ];
 
 var MOCK_CAN = [
-  { id: '0x100',      ext: false, dlc: 8, datos: '00 01 A4 B0 02 00 00 00', visto_ms: 1000  },
-  { id: '0x101',      ext: false, dlc: 4, datos: 'FF FF 00 01',             visto_ms: 5000  },
-  { id: '0x18FF50E5', ext: true,  dlc: 8, datos: 'AA BB CC DD EE FF 00 11', visto_ms: 12000 }
+  { id:'0x701',       ext:false, dlc:1, datos:'05',                       visto_ms:900  },
+  { id:'0x181',       ext:false, dlc:6, datos:'B0 04 11 00 00 00',        visto_ms:90   },
+  { id:'0x182',       ext:false, dlc:4, datos:'C4 09 18 17',              visto_ms:180  },
+  { id:'0x18F00400',  ext:true,  dlc:8, datos:'FF FF FF C0 2E FF FF FF',  visto_ms:95   },
+  { id:'0x18FE0900',  ext:true,  dlc:8, datos:'00 04 00 00 FF FF FF FF',  visto_ms:950  },
+  { id:'0x583',       ext:false, dlc:8, datos:'43 00 10 00 95 07 00 00',  visto_ms:4900 },
 ];
 
+var MOCK_LOGS    = { sd: false, archivos: [] };
 var MOCK_ALERTAS = [
-  { utc: 0, nivel: 'WARNING', mensaje: 'Nuevo dispositivo BLE detectado (id 0x1A2B3C)' },
-  { utc: 0, nivel: 'WARNING', mensaje: 'Nueva direccion Modbus detectada: esclavo 12' }
+  { utc:0, uptime_ms:245000, nivel:'WARNING',  mensaje:'Nuevo dispositivo BLE detectado fuera de whitelist (AA:BB:CC:11:22:33)' },
+  { utc:0, uptime_ms:200000, nivel:'WARNING',  mensaje:'Nueva dirección Modbus detectada: esclavo 5 (primer vez en sesión)' },
+  { utc:0, uptime_ms:150000, nivel:'WARNING',  mensaje:'ID CAN extendido 0x18F00400 (J1939 EEC1) detectado por primera vez' },
 ];
 
 /* ── STATE ──────────────────────────────────────────── */
 
 var state = {
   bleDevices:    [],
-  bleHistory:    [],   // [count, count, ...] ultimas 30 lecturas cada 5s
-  knownMacs:     {},   // mac -> timestamp primera vez vista (sesion)
+  bleHistory:    [],
+  mbHistory:     [],
+  canHistory:    [],
+  knownMacs:     {},
   newMacsThisCycle: [],
   events:        [],
   status:        null,
@@ -55,17 +73,21 @@ var state = {
   connected:     false,
   isMock:        false,
   lastBleMs:     0,
-  totalHeap:     327680,   // referencia ESP32 (bytes)
+  totalHeap:     327680,
+  mbStats:       { slaveCount: {}, fcCount: {}, total: 0 },
+  canStats:      { idCount: {}, stdCount: 0, extCount: 0, total: 0 },
+  mbAccum:       {},
+  canAccum:      {},
 };
 
 /* ── RSSI HELPERS ───────────────────────────────────── */
 
 function rssiInfo(rssi) {
   var pct = Math.max(0, Math.min(100, ((rssi + 100) / 70) * 100));
-  if (rssi >= -60) return { pct:pct, cls:'exc',  label:'Excelente' };
-  if (rssi >= -70) return { pct:pct, cls:'ok',   label:'Bueno'     };
-  if (rssi >= -80) return { pct:pct, cls:'warn', label:'Débil'     };
-  return              { pct:pct, cls:'crit', label:'Crítico'   };
+  if (rssi >= -60) return { pct:pct, cls:'exc',  label:'Excelente', color:'#22c55e' };
+  if (rssi >= -70) return { pct:pct, cls:'ok',   label:'Bueno',     color:'#84cc16' };
+  if (rssi >= -80) return { pct:pct, cls:'warn', label:'Débil',     color:'#f59e0b' };
+  return              { pct:pct, cls:'crit', label:'Crítico',   color:'#ef4444' };
 }
 
 /* ── FORMATTING ─────────────────────────────────────── */
@@ -97,11 +119,17 @@ function fmtEvTime(ev) {
     var d = new Date(ev.utc * 1000);
     return d.toLocaleTimeString('es-BO', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   }
-  var s = Math.floor(ev.uptime_ms / 1000);
+  var s = Math.floor((ev.uptime_ms || 0) / 1000);
   return 'up+' + fmtUptime(s);
 }
 
-/* ── SPARKLINE ──────────────────────────────────────── */
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+/* ── CHART: SPARKLINE ───────────────────────────────── */
 
 function buildSparkPaths(data, w, h, pad) {
   pad = pad || 4;
@@ -123,49 +151,121 @@ function updateSparkline() {
   var paths = buildSparkPaths(data, 300, 52, 4);
   document.getElementById('sp-line').setAttribute('d', paths.line);
   document.getElementById('sp-area').setAttribute('d', paths.area);
-
   var el = document.getElementById('sp-range');
-  if (data.length > 1) {
-    el.textContent = '(' + data.length * 5 + 's window)';
+  if (data.length > 1) el.textContent = '(' + data.length * 5 + 's)';
+}
+
+/* ── CHART: MULTI-SERIES ACTIVITY ───────────────────── */
+
+function updateActivityChart() {
+  var ble = state.bleHistory;
+  var mb  = state.mbHistory;
+  var can = state.canHistory;
+  var W = 400, H = 72, pad = 5;
+
+  var allVals = ble.concat(mb).concat(can).concat([1]);
+  var maxVal = Math.max.apply(null, allVals);
+
+  function makePath(data) {
+    if (data.length < 2) return { line: '', area: '' };
+    var pts = data.map(function(v, i) {
+      var x = (i / (data.length - 1)) * W;
+      var y = H - pad - (v / maxVal) * (H - pad * 2);
+      return [x.toFixed(1), y.toFixed(1)];
+    });
+    var cmds = pts.map(function(p, i) { return (i ? 'L' : 'M') + p[0] + ',' + p[1]; }).join('');
+    var last = pts[pts.length - 1];
+    return {
+      line: cmds,
+      area: cmds + 'L' + last[0] + ',' + H + 'L0,' + H + 'Z'
+    };
+  }
+
+  var pBle = makePath(ble), pMb = makePath(mb), pCan = makePath(can);
+  document.getElementById('act-ble').setAttribute('d', pBle.line);
+  document.getElementById('act-ble-area').setAttribute('d', pBle.area);
+  document.getElementById('act-mb').setAttribute('d', pMb.line);
+  document.getElementById('act-mb-area').setAttribute('d', pMb.area);
+  document.getElementById('act-can').setAttribute('d', pCan.line);
+  document.getElementById('act-can-area').setAttribute('d', pCan.area);
+}
+
+/* ── CHART: DONUT ───────────────────────────────────── */
+
+function renderDonut(svgId, legendId, segments) {
+  var svgEl    = document.getElementById(svgId);
+  var legendEl = legendId ? document.getElementById(legendId) : null;
+  if (!svgEl) return;
+
+  var total = segments.reduce(function(s, x) { return s + x.count; }, 0);
+  var r = 40, circ = 2 * Math.PI * r;
+  var offset = circ / 4;
+  var html = '<circle cx="60" cy="60" r="40" fill="none" stroke="#1e2235" stroke-width="16"/>';
+
+  if (total > 0) {
+    segments.forEach(function(seg) {
+      if (!seg.count) return;
+      var dash = (seg.count / total) * circ;
+      html += '<circle cx="60" cy="60" r="40" fill="none" stroke="' + seg.color + '" stroke-width="16" ' +
+        'stroke-dasharray="' + dash.toFixed(2) + ' ' + (circ - dash).toFixed(2) + '" ' +
+        'stroke-dashoffset="' + offset.toFixed(2) + '"/>';
+      offset -= dash;
+    });
+  }
+
+  var label = total > 0 ? String(total) : '--';
+  html += '<text x="60" y="57" text-anchor="middle" fill="#dde1f0" font-size="20" font-weight="700" font-family="system-ui">' + label + '</text>';
+  html += '<text x="60" y="70" text-anchor="middle" fill="#636b80" font-size="8.5" font-family="system-ui">total</text>';
+  svgEl.innerHTML = html;
+
+  if (legendEl) {
+    legendEl.innerHTML = segments.map(function(s) {
+      return '<div class="leg-row">' +
+        '<span class="leg-dot" style="background:' + s.color + '"></span>' +
+        '<span class="leg-lbl">' + s.label + '</span>' +
+        '<span class="leg-n">' + s.count + '</span>' +
+      '</div>';
+    }).join('');
   }
 }
 
-/* ── RSSI DISTRIBUTION CHART ─────────────────────────── */
+/* ── CHART: HORIZONTAL BARS ─────────────────────────── */
 
-function updateRssiDist() {
-  var devs = state.bleDevices;
-  var bins = [
-    { label: 'Excelente', range: '≥ −60',  cls: 'exc',  color: '#22c55e', count: 0 },
-    { label: 'Bueno',     range: '−70',    cls: 'ok',   color: '#84cc16', count: 0 },
-    { label: 'Débil',     range: '−80',    cls: 'warn', color: '#f59e0b', count: 0 },
-    { label: 'Crítico',   range: '< −80',  cls: 'crit', color: '#ef4444', count: 0 },
-  ];
-
-  devs.forEach(function(d) {
-    var q = rssiInfo(d.rssi);
-    for (var i = 0; i < bins.length; i++) {
-      if (bins[i].cls === q.cls) { bins[i].count++; break; }
-    }
-  });
-
-  var total = devs.length || 1;
-  var el = document.getElementById('rssi-dist');
-
-  if (devs.length === 0) {
-    el.innerHTML = '<div class="rssi-empty">Sin datos BLE</div>';
+function renderBars(elId, items) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  if (!items || !items.length) {
+    el.innerHTML = '<div class="rssi-empty">Sin datos</div>';
     return;
   }
-
-  var html = bins.map(function(b) {
-    var pct = (b.count / total * 100).toFixed(0) + '%';
-    return '<div class="rssi-row">' +
-      '<div class="rssi-row-lbl">' + b.label + '</div>' +
-      '<div class="rssi-row-track"><div class="rssi-row-fill" style="width:' + pct + ';background:' + b.color + '"></div></div>' +
-      '<div class="rssi-row-count">' + b.count + '</div>' +
+  var maxVal = Math.max.apply(null, items.map(function(i){ return i.value; }).concat([1]));
+  el.innerHTML = items.map(function(item) {
+    var pct = (item.value / maxVal * 100).toFixed(1);
+    return '<div class="hbar-row">' +
+      '<div class="hbar-lbl">' + escHtml(String(item.label)) + '</div>' +
+      '<div class="hbar-track"><div class="hbar-fill" style="width:' + pct + '%;background:' + (item.color || 'var(--accent)') + '"></div></div>' +
+      '<div class="hbar-val">' + item.value + '</div>' +
     '</div>';
   }).join('');
+}
 
-  el.innerHTML = html;
+/* ── RSSI DISTRIBUTION ──────────────────────────────── */
+
+function updateRssiDonuts() {
+  var devs = state.bleDevices;
+  var bins = [
+    { label:'Excelente', color:'#22c55e', count:0 },
+    { label:'Bueno',     color:'#84cc16', count:0 },
+    { label:'Débil',     color:'#f59e0b', count:0 },
+    { label:'Crítico',   color:'#ef4444', count:0 },
+  ];
+  devs.forEach(function(d) {
+    var q = rssiInfo(d.rssi);
+    var map = { exc:0, ok:1, warn:2, crit:3 };
+    bins[map[q.cls]].count++;
+  });
+  renderDonut('rssi-donut',     'donut-legend',      bins);
+  renderDonut('ble-rssi-donut', 'ble-donut-legend',  bins);
 }
 
 /* ── EVENT FEED ──────────────────────────────────────── */
@@ -188,39 +288,52 @@ function buildEvItem(ev) {
   return li;
 }
 
-function escHtml(s) {
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
-}
-
 function updateEventFeeds() {
   var evs = state.events;
 
-  // mini feed (overview, last 5)
   var mini = document.getElementById('mini-feed');
   mini.innerHTML = '';
-  var shown = evs.slice(0, 5);
+  var shown = evs.slice(0, 6);
   if (shown.length === 0) {
     var li = document.createElement('li');
-    li.className = 'ev-empty';
-    li.textContent = 'Sin eventos registrados';
+    li.className = 'ev-empty'; li.textContent = 'Sin eventos registrados';
     mini.appendChild(li);
   } else {
     shown.forEach(function(ev) { mini.appendChild(buildEvItem(ev)); });
   }
 
-  // full feed (eventos section)
   var full = document.getElementById('ev-feed');
   full.innerHTML = '';
   document.getElementById('ev-chip').textContent = evs.length;
+  setNavChip('nav-ev-chip', evs.length);
   if (evs.length === 0) {
     var li2 = document.createElement('li');
-    li2.className = 'ev-empty';
-    li2.textContent = 'Sin eventos registrados';
+    li2.className = 'ev-empty'; li2.textContent = 'Sin eventos registrados';
     full.appendChild(li2);
   } else {
     evs.forEach(function(ev) { full.appendChild(buildEvItem(ev)); });
+  }
+
+  // source breakdown strip
+  var counts = { ble:0, modbus:0, can:0 };
+  evs.forEach(function(ev) { if (counts[ev.source] !== undefined) counts[ev.source]++; });
+  var srcRow = document.getElementById('ev-src-row');
+  if (srcRow) {
+    var defs = [
+      { key:'ble',    label:'BLE',    color:'#2dd4bf' },
+      { key:'modbus', label:'Modbus', color:'#f59e0b' },
+      { key:'can',    label:'CAN',    color:'#4a9eff' },
+    ];
+    srcRow.innerHTML = defs.map(function(d) {
+      return '<div class="ev-src-stat">' +
+        '<span class="ev-src-stat-dot" style="background:' + d.color + '"></span>' +
+        '<span class="ev-src-stat-n" style="color:' + d.color + '">' + counts[d.key] + '</span>' +
+        '<span class="ev-src-stat-lbl">' + d.label + '</span>' +
+      '</div>';
+    }).join('') + '<div class="ev-src-stat" style="margin-left:auto">' +
+      '<span class="ev-src-stat-n">' + evs.length + '</span>' +
+      '<span class="ev-src-stat-lbl">total</span>' +
+    '</div>';
   }
 }
 
@@ -230,7 +343,6 @@ function buildDevCard(d) {
   var q = rssiInfo(d.rssi);
   var isNew = state.newMacsThisCycle.indexOf(d.mac) >= 0;
   var visto = d.visto_ms !== undefined ? fmtVisto(d.visto_ms) : '--';
-
   return '<div class="dev-card">' +
     '<div class="dev-signal">' +
       '<div class="sig-track"><div class="sig-fill sig-fill--' + q.cls + '" style="width:' + q.pct.toFixed(0) + '%"></div></div>' +
@@ -252,42 +364,46 @@ function buildDevCard(d) {
 
 function updateBleSection() {
   var devs = state.bleDevices.slice().sort(function(a, b) { return b.rssi - a.rssi; });
-  var container = document.getElementById('dev-list');
-
   document.getElementById('ble-chip').textContent = devs.length;
-
-  var navChip = document.getElementById('nav-ble-chip');
-  navChip.textContent = devs.length;
-  navChip.classList.toggle('visible', devs.length > 0);
-
+  setNavChip('nav-ble-chip', devs.length);
+  var container = document.getElementById('dev-list');
   if (devs.length === 0) {
     container.innerHTML = '<div class="empty-state">Sin dispositivos BLE detectados en los últimos 2 min</div>';
   } else {
     container.innerHTML = devs.map(buildDevCard).join('');
   }
-
   var ts = document.getElementById('ble-ts');
-  if (state.lastBleMs) {
-    ts.textContent = 'actualizado ' + fmtVisto(Date.now() - state.lastBleMs);
-  }
+  if (state.lastBleMs) ts.textContent = 'actualizado ' + fmtVisto(Date.now() - state.lastBleMs);
 }
 
 /* ── KPI UPDATE ──────────────────────────────────────── */
 
 function updateKpis() {
-  var devs = state.bleDevices;
+  var devs  = state.bleDevices;
   var total = Object.keys(state.knownMacs).length;
 
   document.getElementById('k-ble-activos').textContent = devs.length;
   document.getElementById('k-ble-total').textContent   = total;
   document.getElementById('k-eventos').textContent     = state.events.length;
+  document.getElementById('k-mb-frames').textContent   = state.mbStats.total || '--';
+  document.getElementById('k-can-frames').textContent  = state.canStats.total || '--';
+
+  // header pills
+  setText('pill-ble-n', devs.length);
+  setText('pill-mb-n',  state.mbStats.total || 0);
+  setText('pill-can-n', state.canStats.total || 0);
 
   if (state.status) {
-    var h = state.status.free_heap;
+    var h   = state.status.free_heap;
     var pct = Math.min(100, (h / state.totalHeap) * 100);
     document.getElementById('k-heap').textContent = fmtHeapKB(h);
     setBarPct('k-heap-bar', pct);
   }
+}
+
+function setText(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
 }
 
 function setBarPct(id, pct) {
@@ -302,40 +418,71 @@ function setBarPct(id, pct) {
 function updateSistema() {
   var s = state.status;
   if (!s) return;
-  document.getElementById('s-device').textContent  = s.device  || '--';
-  document.getElementById('s-version').textContent = s.version || '--';
-  document.getElementById('s-build').textContent   = s.build   || '--';
-  document.getElementById('s-ip').textContent      = s.ip      || '--';
-  document.getElementById('s-uptime').textContent  = fmtUptime(s.uptime_s || 0);
+  setText('s-device',  s.device  || '--');
+  setText('s-version', s.version || '--');
+  setText('s-build',   s.build   || '--');
+  setText('s-ip',      s.ip      || '--');
+  setText('s-uptime',  fmtUptime(s.uptime_s || 0));
+  setText('header-ip', s.ip      || '--');
+  setText('footer-up', 'uptime: ' + fmtUptime(s.uptime_s || 0));
 
-  var h = s.free_heap || 0;
+  var h   = s.free_heap || 0;
   var pct = Math.min(100, (h / state.totalHeap) * 100);
-  document.getElementById('s-heap').textContent    = fmtBytes(h);
-  document.getElementById('s-heap-pct').textContent = '(' + pct.toFixed(0) + '% libre)';
+  setText('s-heap',    fmtBytes(h));
+  setText('s-heap-pct', '(' + pct.toFixed(0) + '% libre)');
   setBarPct('s-heap-bar', pct);
 
-  document.getElementById('header-ip').textContent  = s.ip || '--';
-  document.getElementById('footer-up').textContent  = 'uptime: ' + fmtUptime(s.uptime_s || 0);
+  // live metrics strip
+  var heapUsed = state.totalHeap - h;
+  var heapUsedPct = Math.min(100, (heapUsed / state.totalHeap) * 100);
+  var gFill = document.getElementById('sysm-heap-fill');
+  if (gFill) {
+    gFill.style.width = heapUsedPct.toFixed(0) + '%';
+    gFill.style.background = heapUsedPct < 60 ? 'linear-gradient(90deg,var(--ok),var(--teal))' : 'linear-gradient(90deg,var(--warn),var(--crit))';
+  }
+  setText('sysm-heap-used', fmtBytes(heapUsed) + ' usados');
+  setText('sysm-evcount',   state.events.length);
+  setText('sysm-blecount',  Object.keys(state.knownMacs).length);
+
+  // bus status tiles
+  var mbN  = s.modbus || 0;
+  var canN = s.can    || 0;
+  var bleN = s.ble    || 0;
+  setText('sb-ble', bleN + ' dispositivos');
+  setText('sb-mb',  mbN  + ' tramas');
+  setText('sb-can', canN + ' tramas');
+  setText('sb-sd',  s.sd ? 'presente' : 'no presente');
 }
 
 /* ── LOGS UPDATE ─────────────────────────────────────── */
 
 function updateLogs(data) {
   state.sdInfo = data;
-  var missing = document.getElementById('sd-missing');
-  var tabla   = document.getElementById('t-logs');
+  var tabla = document.getElementById('t-logs');
 
-  if (!data.sd) {
-    missing.classList.remove('oculto');
-    tabla.classList.add('oculto');
-    return;
+  // Disk card (always visible)
+  var SD_TOTAL_KB = 32768; // 32 MB typical SD
+  var archivos = data.archivos || [];
+  var usedBytes = archivos.reduce(function(s, f) { return s + (f.bytes || 0); }, 0);
+  var usedKB = usedBytes / 1024;
+  var pct = Math.min(100, (usedKB / SD_TOTAL_KB) * 100);
+
+  var badge = document.getElementById('disk-status-badge');
+  if (badge) {
+    badge.textContent = data.sd ? 'Presente' : 'No detectada';
+    badge.className   = 'disk-status ' + (data.sd ? 'disk-status--ok' : 'disk-status--warn');
   }
+  var fill = document.getElementById('disk-bar-fill');
+  if (fill) fill.style.width = (data.sd ? Math.max(pct, 0.5) : 0) + '%';
+  setText('disk-used',  data.sd ? (usedKB.toFixed(1) + ' KB usados de ' + (SD_TOTAL_KB/1024) + ' MB') : 'Sin acceso');
+  setText('disk-files', data.sd ? (archivos.length + ' archivo' + (archivos.length !== 1 ? 's' : '')) : '--');
 
-  missing.classList.add('oculto');
+  if (!data.sd) { tabla.classList.add('oculto'); return; }
+
   tabla.classList.remove('oculto');
   var tbody = tabla.querySelector('tbody');
   tbody.innerHTML = '';
-  (data.archivos || []).forEach(function(f) {
+  archivos.forEach(function(f) {
     var tr = document.createElement('tr');
     tr.innerHTML = '<td>' + escHtml(f.nombre) + '</td>' +
                    '<td>' + (f.bytes / 1024).toFixed(1) + ' KB</td>' +
@@ -344,106 +491,14 @@ function updateLogs(data) {
   });
 }
 
-/* ── API FETCHERS ────────────────────────────────────── */
-
-function setConn(ok) {
-  state.connected = ok;
-  var dot  = document.getElementById('conn-dot');
-  var text = document.getElementById('conn-text');
-  dot.className  = 'conn-dot ' + (ok ? 'ok' : 'err');
-  text.textContent = ok ? 'conectado' : 'sin conexion';
-}
-
-function fetchStatus() {
-  fetch('/api/status')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      state.status = data;
-      state.isMock = false;
-      setConn(true);
-      updateSistema();
-      updateKpis();
-      document.getElementById('modo-local').classList.add('oculto');
-    })
-    .catch(function() {
-      if (!state.status) {
-        state.status = MOCK_STATUS;
-        state.isMock = true;
-        document.getElementById('modo-local').classList.remove('oculto');
-        var dot = document.getElementById('conn-dot');
-        dot.className = 'conn-dot pulse';
-        document.getElementById('conn-text').textContent = 'modo local';
-        updateSistema();
-        updateKpis();
-      }
-    });
-}
-
-function fetchBle() {
-  fetch('/api/ble/devices')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { applyBleData(data); })
-    .catch(function() {
-      if (state.isMock) applyBleData(MOCK_BLE);
-    });
-}
-
-function applyBleData(devs) {
-  state.newMacsThisCycle = [];
-  var now = Date.now();
-
-  devs.forEach(function(d) {
-    if (!state.knownMacs[d.mac]) {
-      state.knownMacs[d.mac] = now;
-      state.newMacsThisCycle.push(d.mac);
-    }
-  });
-
-  state.bleDevices = devs;
-  state.lastBleMs  = now;
-
-  // historial para sparkline (max 30 puntos = ~2.5 min)
-  state.bleHistory.push(devs.length);
-  if (state.bleHistory.length > 30) state.bleHistory.shift();
-
-  updateBleSection();
-  updateKpis();
-  updateSparkline();
-  updateRssiDist();
-}
-
-function fetchEvents() {
-  fetch('/api/events')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      state.events = data;
-      updateEventFeeds();
-    })
-    .catch(function() {
-      if (state.isMock && state.events.length === 0) {
-        state.events = MOCK_EVENTS;
-        updateEventFeeds();
-      }
-    });
-}
-
-function fetchLogs() {
-  fetch('/api/logs')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { updateLogs(data); })
-    .catch(function() {
-      if (state.isMock) updateLogs(MOCK_LOGS);
-    });
-}
-
 /* ── MODBUS ──────────────────────────────────────────── */
 
 function fmtFuncion(fc) {
   var hex = '0x' + ('0' + fc.toString(16).toUpperCase()).slice(-2);
-  var nombres = { 1:'Read Coils', 2:'Read Inputs', 3:'Read Holding',
-                  4:'Read Input Reg', 5:'Write Coil', 6:'Write Reg',
-                  15:'Write Coils', 16:'Write Regs' };
-  return nombres[fc] ? (hex + ' ' + nombres[fc]) : hex;
+  var n = { 1:'Read Coils', 2:'Read Inputs', 3:'Read Holding',
+            4:'Read Input Reg', 5:'Write Coil', 6:'Write Single Reg',
+            15:'Write Coils', 16:'Write Regs' };
+  return n[fc] ? (hex + ' ' + n[fc]) : hex;
 }
 
 function setNavChip(id, n) {
@@ -456,33 +511,68 @@ function setNavChip(id, n) {
 function updateModbus(rows) {
   document.getElementById('mb-chip').textContent = rows.length;
   setNavChip('nav-mb-chip', rows.length);
+
+  // Compute stats
+  var slaveCount = {};
+  var fcCount    = {};
+  rows.forEach(function(d) {
+    var sk = 'Esclavo ' + d.slave;
+    slaveCount[sk] = (slaveCount[sk] || 0) + 1;
+    var fk = fmtFuncion(d.function);
+    fcCount[fk] = (fcCount[fk] || 0) + 1;
+  });
+
+  // Merge into accumulators for persistent history
+  Object.keys(slaveCount).forEach(function(k) {
+    state.mbAccum[k] = (state.mbAccum[k] || 0) + slaveCount[k];
+  });
+  Object.keys(fcCount).forEach(function(k) {
+    state.canAccum; // intentional noop — fcCount is not accumulated globally
+  });
+
+  state.mbStats = { slaveCount: slaveCount, fcCount: fcCount, total: rows.length };
+
+  // Push history point
+  state.mbHistory.push(rows.length);
+  if (state.mbHistory.length > 30) state.mbHistory.shift();
+
+  // Render charts
+  var slaveItems = Object.keys(state.mbAccum).map(function(k) {
+    return { label: k, value: state.mbAccum[k], color: 'var(--warn)' };
+  }).sort(function(a,b){ return b.value - a.value; }).slice(0, 6);
+
+  var fcItems = Object.keys(fcCount).map(function(k) {
+    return { label: k, value: fcCount[k], color: 'rgba(245,158,11,.7)' };
+  }).sort(function(a,b){ return b.value - a.value; });
+
+  renderBars('mb-slave-bars', slaveItems);
+  renderBars('mb-fc-bars',    fcItems);
+  renderBars('ov-mb-bars',    slaveItems.slice(0, 5));
+
+  // Rate badge
+  var badge = document.getElementById('mb-rate');
+  if (badge) badge.textContent = rows.length + ' tramas en buffer';
+
+  // Table
   var idle  = document.getElementById('mb-idle');
   var tabla = document.getElementById('t-modbus');
   if (rows.length === 0) {
-    idle.classList.remove('oculto');
-    tabla.classList.add('oculto');
-    return;
+    idle.classList.remove('oculto'); tabla.classList.add('oculto'); return;
   }
-  idle.classList.add('oculto');
-  tabla.classList.remove('oculto');
+  idle.classList.add('oculto'); tabla.classList.remove('oculto');
   var tbody = tabla.querySelector('tbody');
   tbody.innerHTML = '';
   rows.forEach(function(d) {
-    var crc = d.crc_ok ? '<span class="badge-ok">OK</span>'
-                       : '<span class="badge-err">ERR</span>';
+    var crc = d.crc_ok ? '<span class="badge-ok">OK</span>' : '<span class="badge-err">ERR</span>';
     var tr = document.createElement('tr');
     tr.innerHTML = '<td>' + fmtVisto(d.visto_ms) + '</td><td>' + d.slave +
                    '</td><td>' + fmtFuncion(d.function) + '</td><td>' + d.len +
                    '</td><td>' + crc + '</td>';
     tbody.appendChild(tr);
   });
-}
 
-function fetchModbus() {
-  fetch('/api/modbus')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { updateModbus(data); })
-    .catch(function() { if (state.isMock) updateModbus(MOCK_MODBUS); });
+  updateKpis();
+  updateActivityChart();
 }
 
 /* ── CAN ─────────────────────────────────────────────── */
@@ -490,15 +580,50 @@ function fetchModbus() {
 function updateCan(rows) {
   document.getElementById('can-chip').textContent = rows.length;
   setNavChip('nav-can-chip', rows.length);
+
+  var idCount  = {};
+  var stdCount = 0, extCount = 0;
+  rows.forEach(function(d) {
+    idCount[d.id] = (idCount[d.id] || 0) + 1;
+    if (d.ext) extCount++; else stdCount++;
+  });
+
+  // Accumulate for persistent history
+  Object.keys(idCount).forEach(function(k) {
+    state.canAccum[k] = (state.canAccum[k] || 0) + idCount[k];
+  });
+
+  state.canStats = { idCount: idCount, stdCount: stdCount, extCount: extCount, total: rows.length };
+
+  state.canHistory.push(rows.length);
+  if (state.canHistory.length > 30) state.canHistory.shift();
+
+  // ID bars (from accumulator, sorted by activity)
+  var idItems = Object.keys(state.canAccum).map(function(k) {
+    return { label: k, value: state.canAccum[k], color: 'var(--accent)' };
+  }).sort(function(a,b){ return b.value - a.value; }).slice(0, 6);
+
+  renderBars('can-id-bars', idItems);
+  renderBars('ov-can-bars', idItems.slice(0, 5));
+
+  // Protocol donut
+  var protoSegs = [
+    { label:'Estándar (11b)', color:'#4a9eff', count: stdCount },
+    { label:'Extendido (29b)', color:'#a855f7', count: extCount },
+  ];
+  renderDonut('can-proto-donut', 'can-proto-legend', protoSegs);
+
+  // Rate badge
+  var badge = document.getElementById('can-rate');
+  if (badge) badge.textContent = rows.length + ' tramas en buffer';
+
+  // Table
   var idle  = document.getElementById('can-idle');
   var tabla = document.getElementById('t-can');
   if (rows.length === 0) {
-    idle.classList.remove('oculto');
-    tabla.classList.add('oculto');
-    return;
+    idle.classList.remove('oculto'); tabla.classList.add('oculto'); return;
   }
-  idle.classList.add('oculto');
-  tabla.classList.remove('oculto');
+  idle.classList.add('oculto'); tabla.classList.remove('oculto');
   var tbody = tabla.querySelector('tbody');
   tbody.innerHTML = '';
   rows.forEach(function(d) {
@@ -508,13 +633,9 @@ function updateCan(rows) {
                    '</td><td>' + d.dlc + '</td><td>' + escHtml(d.datos || '') + '</td>';
     tbody.appendChild(tr);
   });
-}
 
-function fetchCan() {
-  fetch('/api/can')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { updateCan(data); })
-    .catch(function() { if (state.isMock) updateCan(MOCK_CAN); });
+  updateKpis();
+  updateActivityChart();
 }
 
 /* ── ALERTAS ─────────────────────────────────────────── */
@@ -522,14 +643,25 @@ function fetchCan() {
 function updateAlertas(rows) {
   document.getElementById('al-chip').textContent = rows.length;
   setNavChip('nav-al-chip', rows.length);
+
+  var nWarn = 0, nCrit = 0;
+  rows.forEach(function(a) {
+    if (a.nivel === 'CRITICAL') nCrit++; else nWarn++;
+  });
+  setText('al-n-warn', nWarn);
+  setText('al-n-crit', nCrit);
+  var okCard = document.getElementById('al-n-ok');
+  if (okCard) {
+    okCard.parentElement.style.display = rows.length === 0 ? '' : 'none';
+  }
+
   var feed = document.getElementById('al-feed');
   feed.innerHTML = '';
   if (rows.length === 0) {
     var vacio = document.createElement('li');
     vacio.className = 'ev-empty';
-    vacio.textContent = 'Sin alertas -- ninguna entidad anomala detectada';
-    feed.appendChild(vacio);
-    return;
+    vacio.textContent = 'Sin alertas — ninguna entidad anómala detectada';
+    feed.appendChild(vacio); return;
   }
   rows.forEach(function(a) {
     var li = document.createElement('li');
@@ -543,11 +675,119 @@ function updateAlertas(rows) {
   });
 }
 
+/* ── API FETCHERS ────────────────────────────────────── */
+
+function setConn(ok) {
+  state.connected = ok;
+  var dot  = document.getElementById('conn-dot');
+  var text = document.getElementById('conn-text');
+  dot.className    = 'conn-dot ' + (ok ? 'ok' : 'err');
+  text.textContent = ok ? 'conectado' : 'sin conexión';
+}
+
+function fetchStatus() {
+  fetch('/api/status')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      state.status = data; state.isMock = false;
+      setConn(true);
+      updateSistema(); updateKpis();
+      document.getElementById('modo-local').classList.add('oculto');
+    })
+    .catch(function() {
+      if (!state.status) {
+        state.status = MOCK_STATUS; state.isMock = true;
+        document.getElementById('modo-local').classList.remove('oculto');
+        document.getElementById('conn-dot').className = 'conn-dot pulse';
+        document.getElementById('conn-text').textContent = 'modo local';
+        updateSistema(); updateKpis();
+      }
+    });
+}
+
+function fetchBle() {
+  fetch('/api/ble/devices')
+    .then(function(r){ return r.json(); })
+    .then(function(data){ applyBleData(data); })
+    .catch(function(){ if (state.isMock) applyBleData(MOCK_BLE); });
+}
+
+function applyBleData(devs) {
+  state.newMacsThisCycle = [];
+  var now = Date.now();
+  devs.forEach(function(d) {
+    if (!state.knownMacs[d.mac]) {
+      state.knownMacs[d.mac] = now;
+      state.newMacsThisCycle.push(d.mac);
+    }
+  });
+  state.bleDevices = devs;
+  state.lastBleMs  = now;
+  state.bleHistory.push(devs.length);
+  if (state.bleHistory.length > 30) state.bleHistory.shift();
+
+  updateBleSection();
+  updateKpis();
+  updateSparkline();
+  updateRssiDonuts();
+  updateActivityChart();
+}
+
+function fetchEvents() {
+  fetch('/api/events')
+    .then(function(r){ return r.json(); })
+    .then(function(data){ state.events = data; updateEventFeeds(); })
+    .catch(function(){
+      if (state.isMock && state.events.length === 0) {
+        state.events = MOCK_EVENTS; updateEventFeeds();
+      }
+    });
+}
+
+function fetchLogs() {
+  fetch('/api/logs')
+    .then(function(r){ return r.json(); })
+    .then(function(data){ updateLogs(data); })
+    .catch(function(){ if (state.isMock) updateLogs(MOCK_LOGS); });
+}
+
+function fetchModbus() {
+  fetch('/api/modbus')
+    .then(function(r){ return r.json(); })
+    .then(function(data){ updateModbus(data); })
+    .catch(function(){ if (state.isMock) updateModbus(MOCK_MODBUS); });
+}
+
+function fetchCan() {
+  fetch('/api/can')
+    .then(function(r){ return r.json(); })
+    .then(function(data){ updateCan(data); })
+    .catch(function(){ if (state.isMock) updateCan(MOCK_CAN); });
+}
+
 function fetchAlertas() {
   fetch('/api/alerts')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { updateAlertas(data); })
-    .catch(function() { if (state.isMock) updateAlertas(MOCK_ALERTAS); });
+    .then(function(r){ return r.json(); })
+    .then(function(data){ updateAlertas(data); })
+    .catch(function(){ if (state.isMock) updateAlertas(MOCK_ALERTAS); });
+}
+
+/* ── PRE-POPULATE MOCK HISTORIES ────────────────────── */
+
+function initMockHistories() {
+  state.bleHistory = [4,4,5,5,6,6,6,5,5,4,4,5,6,6,6,5,5,4,4,5,6,6,5,5,4,5,6,6,6,6];
+  state.mbHistory  = [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6];
+  state.canHistory = [6,7,7,8,8,7,7,6,7,7,8,8,7,7,6,7,8,8,8,7,7,6,7,8,8,7,7,6,7,8];
+
+  // Seed accumulators so charts are full immediately in mock mode
+  state.mbAccum = {
+    'Esclavo 1': 18, 'Esclavo 2': 14, 'Esclavo 3': 12,
+    'Esclavo 5': 28, 'Esclavo 7': 7
+  };
+  state.canAccum = {
+    '0x181': 180, '0x18F00400': 180, '0x182': 90,
+    '0x18FE0900': 18, '0x701': 18, '0x583': 3
+  };
 }
 
 /* ── NAVIGATION ──────────────────────────────────────── */
@@ -570,12 +810,9 @@ function navTo(sec) {
 /* ── INIT ────────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', function() {
-
-  // initial connection dot state
   document.getElementById('conn-dot').className = 'conn-dot pulse';
   document.getElementById('conn-text').textContent = 'conectando...';
 
-  // navigation
   navTo(getSecFromHash());
   window.addEventListener('hashchange', function() { navTo(getSecFromHash()); });
   document.querySelectorAll('[data-link]').forEach(function(a) {
@@ -584,7 +821,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // initial fetch
+  // In mock mode, seed histories so charts look good from the start
+  initMockHistories();
+
   fetchStatus();
   fetchBle();
   fetchEvents();
@@ -593,20 +832,16 @@ document.addEventListener('DOMContentLoaded', function() {
   fetchCan();
   fetchAlertas();
 
-  // polling
-  setInterval(fetchStatus, 5000);
-  setInterval(fetchBle,    5000);
-  setInterval(fetchEvents, 5000);
+  setInterval(fetchStatus,  5000);
+  setInterval(fetchBle,     5000);
+  setInterval(fetchEvents,  5000);
   setInterval(fetchLogs,   15000);
-  setInterval(fetchModbus, 5000);
-  setInterval(fetchCan,    5000);
+  setInterval(fetchModbus,  5000);
+  setInterval(fetchCan,     5000);
   setInterval(fetchAlertas, 5000);
 
-  // update "updated X ago" label in BLE section
   setInterval(function() {
     var ts = document.getElementById('ble-ts');
-    if (state.lastBleMs) {
-      ts.textContent = 'actualizado ' + fmtVisto(Date.now() - state.lastBleMs);
-    }
+    if (state.lastBleMs) ts.textContent = 'actualizado ' + fmtVisto(Date.now() - state.lastBleMs);
   }, 2000);
 });

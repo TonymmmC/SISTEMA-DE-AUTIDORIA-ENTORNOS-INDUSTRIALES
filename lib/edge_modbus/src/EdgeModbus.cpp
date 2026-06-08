@@ -59,6 +59,44 @@ static void procesarTrama(const uint8_t* buf, size_t len) {
 // ---------------------------------------------------------------------------
 
 static void modbusTask(void* /*arg*/) {
+#ifdef MODBUS_SIM
+    // Escenario: PLC Schneider M221 sondeando 5 esclavos industriales.
+    // Las tramas se construyen con CRC valido y se procesan por el mismo path
+    // que usaria el hardware real -- procesarTrama() valida y rechazaria CRCs malos.
+    struct SimEntry { uint8_t slave; uint8_t fc; uint8_t ah; uint8_t al; uint8_t ch; uint8_t cl; uint32_t ms; };
+    static const SimEntry k_sim[] = {
+        {1, 0x04, 0x00, 0x00, 0x00, 0x02,  800},  // esclavo 1: sensor temp/humedad (2 input regs)
+        {2, 0x04, 0x00, 0x00, 0x00, 0x01, 1000},  // esclavo 2: sensor presion (1 input reg)
+        {3, 0x03, 0x00, 0x00, 0x00, 0x04, 1200},  // esclavo 3: caudalimetro (4 holding regs)
+        {5, 0x01, 0x00, 0x00, 0x00, 0x08,  600},  // esclavo 5: actuadores (8 coils)
+        {7, 0x03, 0x00, 0x00, 0x00, 0x08, 2000},  // esclavo 7: medidor energia (8 holding regs)
+        {5, 0x06, 0x00, 0x01, 0x00, 0x01, 5000},  // esclavo 5: escribir setpoint (FC06)
+    };
+    static const size_t N = sizeof(k_sim) / sizeof(k_sim[0]);
+    static uint32_t last[N] = {};
+
+    Serial.println("[modbus] Sniffer RTU iniciado (SIMULADO - sin hardware RS485)");
+
+    while (true) {
+        uint32_t now = millis();
+        for (size_t i = 0; i < N; i++) {
+            if (now - last[i] < k_sim[i].ms) continue;
+            last[i] = now;
+            uint8_t buf[8];
+            buf[0] = k_sim[i].slave;
+            buf[1] = k_sim[i].fc;
+            buf[2] = k_sim[i].ah;
+            buf[3] = k_sim[i].al;
+            buf[4] = k_sim[i].ch;
+            buf[5] = k_sim[i].cl;
+            uint16_t crc = crc16Modbus(buf, 6);
+            buf[6] = (uint8_t)(crc & 0xFF);
+            buf[7] = (uint8_t)(crc >> 8);
+            procesarTrama(buf, 8);
+        }
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+#else
     // Listen-only: RX en GPIO36, TX sin asignar (-1). El bus nunca se conduce.
     Serial2.begin(MODBUS_BAUD, SERIAL_8N1, PIN_RS485_RX, -1);
 
@@ -79,6 +117,7 @@ static void modbusTask(void* /*arg*/) {
         }
         vTaskDelay(pdMS_TO_TICKS(1));
     }
+#endif
 }
 
 // ---------------------------------------------------------------------------
