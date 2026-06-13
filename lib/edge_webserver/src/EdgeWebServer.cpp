@@ -43,13 +43,13 @@ bool initWebServer() {
         return false;
     }
 
-    // Assets 3D pesados (Three.js + modelos GLB) viven en la microSD, no en la
-    // LittleFS: el Edge solo guarda dashboard + datos. El render corre en el
-    // navegador del cliente. Se registran ANTES que "/" porque serveStatic("/")
-    // matchea cualquier ruta. Si la SD no esta, estas rutas devuelven 404 y el
-    // mapa cae a primitivas procedurales (degradacion elegante).
+    // Three.js runtime (vendor/) se sirve desde LittleFS para que el mapa 3D
+    // funcione aunque la microSD no este presente. Los modelos GLB (/models/)
+    // viven en SD por su peso; si la SD no esta, el mapa cae a primitivas
+    // procedurales (degradacion elegante). Se registran ANTES que "/" porque
+    // serveStatic("/") matchea cualquier ruta.
+    s_server.serveStatic("/vendor", LittleFS, "/vendor").setCacheControl("max-age=86400");
     s_server.serveStatic("/models", SD, "/models").setCacheControl("max-age=86400");
-    s_server.serveStatic("/vendor", SD, "/vendor").setCacheControl("max-age=86400");
 
     s_server.serveStatic("/", LittleFS, "/")
             .setDefaultFile("index.html")
