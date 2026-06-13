@@ -29,3 +29,14 @@ Desktop.ini
 
 # Logs locales (si se generan durante desarrollo)
 *.log
+
+# Kenney asset sources (kits sin curar). Solo se versiona el set curado en data/models/
+/Models/
+/Previews/
+/factory assets/
+*.zip
+/License.txt
+/Overview.html
+/Sample.png
+/Preview*.png
+*.url

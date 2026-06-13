@@ -25,11 +25,31 @@ static AsyncWebServer s_server(HTTP_PORT);
 // por endpoint. Dimensionado al peor caso (/api/events con 64 eventos).
 static char s_out[9216];
 
+// Buffer de acumulacion del body del POST /api/map/layout. El layout del mapa
+// de planta es config (no escribe al bus Modbus/CAN: persiste a LittleFS), por
+// eso si esta permitido escribir aca. Dimensionado a ~100 entidades (equipos +
+// estructuras); la DRAM estatica del ESP32 es escasa. Si el body excede la
+// capacidad, s_mapOverflow corta y el handler responde 400 (fail fast).
+static char   s_mapBody[8192];
+static size_t s_mapLen      = 0;
+static bool   s_mapOverflow = false;
+
+// Layout vacio por defecto cuando el dispositivo aun no tiene /map.json guardado.
+static const char* MAP_VACIO = "{\"v\":1,\"nodes\":[],\"cables\":[]}";
+
 bool initWebServer() {
     if (!LittleFS.begin(false)) {
         Serial.println("[web] LittleFS: fallo al montar");
         return false;
     }
+
+    // Assets 3D pesados (Three.js + modelos GLB) viven en la microSD, no en la
+    // LittleFS: el Edge solo guarda dashboard + datos. El render corre en el
+    // navegador del cliente. Se registran ANTES que "/" porque serveStatic("/")
+    // matchea cualquier ruta. Si la SD no esta, estas rutas devuelven 404 y el
+    // mapa cae a primitivas procedurales (degradacion elegante).
+    s_server.serveStatic("/models", SD, "/models").setCacheControl("max-age=86400");
+    s_server.serveStatic("/vendor", SD, "/vendor").setCacheControl("max-age=86400");
 
     s_server.serveStatic("/", LittleFS, "/")
             .setDefaultFile("index.html")
@@ -237,6 +257,50 @@ bool initWebServer() {
         String path = String("/audit/") + nombre;
         req->send(SD, path.c_str(), "text/csv", true);
     });
+
+    // Layout del mapa de planta: posiciones autoradas de equipos y cableado.
+    // El Edge no detecta posicion fisica; el usuario dibuja la planta y el
+    // dashboard enlaza las detecciones reales por MAC/esclavo/CAN ID.
+    s_server.on("/api/map/layout", HTTP_GET, [](AsyncWebServerRequest* req) {
+        if (LittleFS.exists("/map.json")) {
+            req->send(LittleFS, "/map.json", "application/json");
+        } else {
+            req->send(200, "application/json", MAP_VACIO);
+        }
+    });
+
+    s_server.on("/api/map/layout", HTTP_POST,
+        [](AsyncWebServerRequest* req) {
+            if (s_mapOverflow || s_mapLen == 0) {
+                s_mapLen = 0; s_mapOverflow = false;
+                req->send(400, "application/json", "{\"ok\":false,\"error\":\"body invalido\"}");
+                return;
+            }
+            JsonDocument doc;
+            DeserializationError err = deserializeJson(doc, s_mapBody, s_mapLen);
+            if (err) {
+                s_mapLen = 0;
+                req->send(400, "application/json", "{\"ok\":false,\"error\":\"json invalido\"}");
+                return;
+            }
+            File f = LittleFS.open("/map.json", "w");
+            if (!f) {
+                s_mapLen = 0;
+                req->send(500, "application/json", "{\"ok\":false,\"error\":\"fs\"}");
+                return;
+            }
+            f.write((const uint8_t*)s_mapBody, s_mapLen);
+            f.close();
+            s_mapLen = 0;
+            req->send(200, "application/json", "{\"ok\":true}");
+        },
+        NULL,
+        [](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
+            if (index == 0) { s_mapLen = 0; s_mapOverflow = false; }
+            if (s_mapLen + len > sizeof(s_mapBody)) { s_mapOverflow = true; return; }
+            memcpy(s_mapBody + s_mapLen, data, len);
+            s_mapLen += len;
+        });
 
     s_server.onNotFound([](AsyncWebServerRequest* request) {
         request->send(404, "text/plain", "No encontrado");
