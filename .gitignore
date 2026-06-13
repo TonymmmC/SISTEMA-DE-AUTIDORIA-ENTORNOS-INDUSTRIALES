@@ -40,3 +40,6 @@ Desktop.ini
 /Sample.png
 /Preview*.png
 *.url
+
+# Mapa 3D: layout persistente local (dibujo de planta por usuario)
+data/map_layout_persist.json

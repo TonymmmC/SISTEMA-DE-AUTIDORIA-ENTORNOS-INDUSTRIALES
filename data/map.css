@@ -215,6 +215,8 @@
   cursor: pointer;
 }
 .mapa-xb:hover { border-color: var(--accent); }
+.mapa-zshape { width: auto; flex: 1; font-size: .74rem; padding: .3rem .3rem; }
+.mapa-zshape.armado { background: var(--accent); border-color: var(--accent); color: #0b1018; font-weight: 600; }
 .mapa-xin {
   width: 56px;
   background: var(--surf);

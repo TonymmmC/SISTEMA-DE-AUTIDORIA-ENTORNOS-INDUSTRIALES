@@ -84,6 +84,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     agents: [], selAgent: null, distLines: [], frame: 0,
     propObj: {}, selProp: null, armedProp: null, manifest: null,
     wallObj: {}, selWall: null, wallArming: false, wallFrom: null, env: [],
+    zoneObj: {}, selZone: null, zoneArming: false,
     undo: []
   };
 
@@ -304,7 +305,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
       new THREE.MeshStandardMaterial({ map: concreteTexture(), roughness: 0.92, metalness: 0.02 }));
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.name = 'floor';
     scene.add(floor); M.gl.floor = floor; M.env.push(floor);
-    buildZones(scene, sx, sz);
   }
 
   function concreteTexture() {
@@ -326,22 +326,50 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     return t;
   }
 
-  function buildZones(scene, sx, sz) {
-    var qx = sx / 2, qz = sz / 2;
-    var zones = [
-      { label: 'Linea de produccion', x: -1, z: -1, color: 0x4a9eff },
-      { label: 'Sala de servidores', x: 1, z: -1, color: 0xa78bfa },
-      { label: 'Almacen', x: -1, z: 1, color: 0x84cc16 },
-      { label: 'Sala de control', x: 1, z: 1, color: 0x2dd4bf }
-    ];
-    zones.forEach(function (z) {
-      var pl = new THREE.Mesh(new THREE.PlaneGeometry(qx - 4, qz - 4),
-        new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: 0.05 }));
-      pl.rotation.x = -Math.PI / 2; pl.position.set(z.x * qx / 2, 0.04, z.z * qz / 2);
-      scene.add(pl); M.env.push(pl);
-      var lab = makeLabel(z.label, hexCss(z.color), 1.0);
-      lab.position.set(z.x * qx / 2, 1.4, z.z * qz / 2 - qz / 2 + 6); scene.add(lab); M.env.push(lab);
-    });
+  /* ── zonas / etiquetas de lugar (entidades editables) ── */
+
+  function addZoneObj(zone) {
+    var g = new THREE.Group();
+    var col = zone.color || 0x4a9eff, size = zone.size || 12;
+    var geo = zone.shape === 'square'
+      ? new THREE.PlaneGeometry(size * 2, size * 2)
+      : new THREE.CircleGeometry(size, 48);
+    var area = new THREE.Mesh(geo,
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.13, side: THREE.DoubleSide }));
+    area.rotation.x = -Math.PI / 2; area.position.y = 0.05; area.name = 'area'; g.add(area);
+    var lab = makeLabel(zone.label || 'Zona', hexCss(col), Math.max(0.6, size / 12));
+    lab.position.y = 2 + (zone.ey || 0); lab.name = 'label'; g.add(lab);
+    var p = gridToWorld(zone.x, zone.z); g.position.set(p.x, 0, p.z);
+    g.traverse(function (o) { o.userData.zoneId = zone.id; });
+    M.gl.scene.add(g); M.zoneObj[zone.id] = g;
+  }
+
+  function refreshZone(zone) {
+    var g = M.zoneObj[zone.id]; if (g) { M.gl.scene.remove(g); delete M.zoneObj[zone.id]; }
+    addZoneObj(zone);
+  }
+
+  function renameZoneObj(zone) {
+    var g = M.zoneObj[zone.id]; if (!g) return;
+    var old = g.getObjectByName('label'); if (old) g.remove(old);
+    var lab = makeLabel(zone.label || 'Zona', hexCss(zone.color || 0x4a9eff), Math.max(0.6, (zone.size || 12) / 12));
+    lab.position.y = 2 + (zone.ey || 0); lab.name = 'label'; lab.userData.zoneId = zone.id; g.add(lab);
+  }
+
+  function setZoneShape(shape) {
+    if (!M.selZone) return;
+    pushUndo();
+    var z = zoneById(M.selZone); z.shape = shape; refreshZone(z); markDirty(); refreshSelPanel();
+  }
+
+  function zoneById(id) { return (M.layout.zones || []).filter(function (z) { return z.id === id; })[0]; }
+  function newZoneId() { return 'z' + ((M.layout.zones || []).length) + '_' + Math.floor(M.clock * 1000 % 100000); }
+
+  function pickZone(ev) {
+    var ids = Object.keys(M.zoneObj); if (!ids.length) return null;
+    M.gl.ray.setFromCamera(ndc(ev), M.gl.camera);
+    var hit = M.gl.ray.intersectObjects(ids.map(function (id) { return M.zoneObj[id]; }), true)[0];
+    return hit ? hit.object.userData.zoneId : null;
   }
 
   /* ── paredes (entidades personalizables) ─────────────── */
@@ -391,9 +419,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     Object.keys(M.nodeObj).forEach(function (id) { scene.remove(M.nodeObj[id]); });
     Object.keys(M.propObj).forEach(function (id) { scene.remove(M.propObj[id]); });
     Object.keys(M.wallObj).forEach(function (id) { scene.remove(M.wallObj[id]); });
+    Object.keys(M.zoneObj).forEach(function (id) { scene.remove(M.zoneObj[id]); });
     M.cables.forEach(function (c) { scene.remove(c.mesh); if (c.dot) scene.remove(c.dot); });
-    M.nodeObj = {}; M.propObj = {}; M.wallObj = {}; M.cables = [];
+    M.nodeObj = {}; M.propObj = {}; M.wallObj = {}; M.zoneObj = {}; M.cables = [];
     (M.layout.walls || []).forEach(addWallObj);
+    (M.layout.zones || []).forEach(addZoneObj);
     M.layout.nodes.forEach(addNodeObj);
     (M.layout.props || []).forEach(addPropObj);
     M.layout.cables.forEach(addCableObj);
@@ -428,11 +458,12 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   function busCurve(a, b) {
     var pa = M.nodeObj[a], pb = M.nodeObj[b];
     if (!pa || !pb) return null;
+    var ya = pa.position.y + 0.5, yb = pb.position.y + 0.5;
     var mid = new THREE.Vector3(
-      (pa.position.x + pb.position.x) / 2, 1.6, (pa.position.z + pb.position.z) / 2);
+      (pa.position.x + pb.position.x) / 2, Math.max(ya, yb) + 1.1, (pa.position.z + pb.position.z) / 2);
     return new THREE.CatmullRomCurve3([
-      new THREE.Vector3(pa.position.x, 0.4, pa.position.z), mid,
-      new THREE.Vector3(pb.position.x, 0.4, pb.position.z)]);
+      new THREE.Vector3(pa.position.x, ya, pa.position.z), mid,
+      new THREE.Vector3(pb.position.x, yb, pb.position.z)]);
   }
 
   function addCableObj(cable) {
@@ -628,16 +659,18 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   }
 
   function onDown(ev) {
-    var nodeId = null, propId = null, wallId = null;
-    var arming = M.armedKind || M.armedProp || M.wallArming || M.cableArming;
+    var nodeId = null, propId = null, wallId = null, zoneId = null;
+    var arming = M.armedKind || M.armedProp || M.wallArming || M.cableArming || M.zoneArming;
     if (M.mode === 'editar' && !arming) {
       nodeId = pickNode(ev); if (!nodeId) propId = pickProp(ev);
-      if (!nodeId && !propId) wallId = pickWall(ev);
+      if (!nodeId && !propId) zoneId = pickZone(ev);
+      if (!nodeId && !propId && !zoneId) wallId = pickWall(ev);
     }
     M.drag = {
       x: ev.clientX, y: ev.clientY, moved: false,
       pan: ev.button === 2 || ev.shiftKey,
-      nodeId: nodeId, propId: propId, wallId: wallId, orbit: !(nodeId || propId || wallId)
+      nodeId: nodeId, propId: propId, wallId: wallId, zoneId: zoneId,
+      orbit: !(nodeId || propId || wallId || zoneId)
     };
   }
 
@@ -646,7 +679,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     var dx = ev.clientX - M.drag.x, dy = ev.clientY - M.drag.y;
     if (Math.abs(dx) + Math.abs(dy) > MOVE_PX) M.drag.moved = true;
     M.drag.x = ev.clientX; M.drag.y = ev.clientY;
-    if ((M.drag.nodeId || M.drag.propId || M.drag.wallId) && M.drag.moved) {
+    if ((M.drag.nodeId || M.drag.propId || M.drag.wallId || M.drag.zoneId) && M.drag.moved) {
       if (!M.drag.pushed) { pushUndo(); M.drag.pushed = true; }
       dragEntity(ev); return;
     }
@@ -693,6 +726,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
       var mx = (wl.x1 + wl.x2) / 2, mz = (wl.z1 + wl.z2) / 2;
       var ddx = tgx - mx, ddz = tgz - mz;
       wl.x1 += ddx; wl.z1 += ddz; wl.x2 += ddx; wl.z2 += ddz; refreshWallObj(wl);
+    } else if (M.drag.zoneId) {
+      var z = zoneById(M.drag.zoneId); if (!z) return;
+      z.x = p.x / CELL + GRIDX / 2; z.z = p.z / CELL + GRIDZ / 2;
+      M.zoneObj[z.id].position.set(p.x, 0, p.z);
     }
     markDirty();
   }
@@ -713,10 +750,54 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     var aid = pickAgent(ev); if (aid) { selectAgent(aid); return; }
     var id = pickNode(ev); if (id) { selectNode(id); return; }
     var pid = pickProp(ev); if (pid) { selectProp(pid); return; }
+    var zid = pickZone(ev); if (zid) { selectZone(zid); return; }
     var wid = pickWall(ev); if (wid) { selectWall(wid); return; }
+    if (M.mode === 'editar' && M.zoneArming) { placeZone(ev); return; }
     if (M.mode === 'editar' && M.armedProp) { placeProp(ev); return; }
     if (M.mode === 'editar' && M.armedKind) { placeNode(ev); return; }
     closePanel();
+  }
+
+  function placeZone(ev) {
+    var p = pickFloor(ev); if (!p) return;
+    pushUndo();
+    var zone = { id: newZoneId(), label: 'Nueva zona',
+      x: p.x / CELL + GRIDX / 2, z: p.z / CELL + GRIDZ / 2, color: 0x4a9eff, shape: 'circle', size: 14, ey: 0 };
+    (M.layout.zones = M.layout.zones || []).push(zone); addZoneObj(zone);
+    M.zoneArming = false; setArmedZone(false);
+    hint('Zona creada. Edita el nombre en el panel.');
+    markDirty(); selectZone(zone.id);
+  }
+
+  function selectZone(id) {
+    M.sel = null; M.selAgent = null; M.selProp = null; M.selWall = null; clearDistLines(); M.selZone = id;
+    document.getElementById('mapa-panel').classList.remove('oculto');
+    fillZonePanel(zoneById(id));
+  }
+
+  function fillZonePanel(z) {
+    if (!z) return;
+    setText('mp-kind', 'Zona / etiqueta');
+    var lab = document.getElementById('mp-label'); lab.value = z.label || ''; lab.disabled = M.mode !== 'editar';
+    var est = document.getElementById('mp-estado'); est.textContent = 'rotulo de lugar'; est.className = 'mapa-panel-v';
+    setText('mp-bind', M.mode === 'editar' ? 'edita el nombre arriba' : '');
+    setText('mp-visto', 'altura ' + (z.ey || 0).toFixed(1) + ' · escala ' + (z.scale || 1).toFixed(2));
+    setText('mp-metric', '');
+    document.getElementById('mp-alert').classList.add('oculto');
+    document.getElementById('mp-bindbox').classList.add('oculto');
+    document.getElementById('mp-dist').classList.add('oculto');
+    showXform(M.mode === 'editar', 'zone');
+  }
+
+  function setArmedZone(on) { document.getElementById('mapa-tool-zone').classList.toggle('armado', !!on); }
+
+  function toggleZone() {
+    clearArmedPalette(); clearArmedProp(); setArmedCable(false); M.cableArming = false;
+    M.wallArming = false; setArmedWall(false); M.zoneArming = false; setArmedZone(false);
+    document.getElementById('mapa-assets').classList.add('oculto');
+    if (M.mode !== 'editar') setMode('editar');
+    M.zoneArming = !M.zoneArming; setArmedZone(M.zoneArming);
+    hint(M.zoneArming ? 'Clic en el piso para crear una zona/etiqueta' : '');
   }
 
   function clickWall(ev) {
@@ -813,6 +894,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   function selData() {
     if (M.selProp) return { t: 'prop', d: propById(M.selProp), o: M.propObj[M.selProp] };
     if (M.selWall) return { t: 'wall', d: wallById(M.selWall), o: M.wallObj[M.selWall] };
+    if (M.selZone) return { t: 'zone', d: zoneById(M.selZone), o: M.zoneObj[M.selZone] };
     if (M.sel) return { t: 'node', d: nodeById(M.sel), o: M.nodeObj[M.sel] };
     return null;
   }
@@ -836,7 +918,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     var s = selData(); if (!s || s.t === 'wall' || !s.d) return;
     pushUndo();
     s.d.ey = Math.max(0, Math.min(60, (s.d.ey || 0) + dd));
-    applyXform(s.o, s.d); markDirty(); refreshSelPanel();
+    if (s.t === 'zone') { var l = M.zoneObj[s.d.id].getObjectByName('label'); if (l) l.position.y = 2 + s.d.ey; }
+    else { applyXform(s.o, s.d); if (s.t === 'node') rebuildCablesOf(s.d.id); }
+    markDirty(); refreshSelPanel();
   }
 
   function rotateSelected() { rotateAxis('ry', 45); }
@@ -853,12 +937,14 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     var s = selData(); if (!s || s.t === 'wall' || !s.d) return;
     pushUndo();
     s.d.ey = Math.max(0, Math.min(60, val));
-    applyXform(s.o, s.d); markDirty(); refreshSelPanel();
+    if (s.t === 'zone') { var l = M.zoneObj[s.d.id].getObjectByName('label'); if (l) l.position.y = 2 + s.d.ey; }
+    else { applyXform(s.o, s.d); if (s.t === 'node') rebuildCablesOf(s.d.id); }
+    markDirty(); refreshSelPanel();
   }
 
   function setScaleAbs(val) {
     var s = selData(); if (!s || !s.d || !(val > 0)) return;
-    var cur = s.t === 'wall' ? (s.d.h || WALL_H) : (s.d.scale || 1);
+    var cur = s.t === 'wall' ? (s.d.h || WALL_H) : s.t === 'zone' ? (s.d.size || 12) : (s.d.scale || 1);
     scaleSelected(val / cur);
   }
 
@@ -878,7 +964,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     setVal('mp-in-ry', wall ? 0 : (d.ry != null ? d.ry : (d.rot || 0)));
     setVal('mp-in-rz', wall ? 0 : (d.rz || 0));
     setVal('mp-in-ey', wall ? 0 : (d.ey || 0));
-    setVal('mp-in-sc', wall ? (d.h || WALL_H) : (d.scale || 1));
+    setVal('mp-in-sc', wall ? (d.h || WALL_H) : s.t === 'zone' ? (d.size || 12) : (d.scale || 1));
+    if (s.t === 'zone') {
+      var sq = document.querySelector('.mapa-zshape[data-shape="square"]');
+      var ci = document.querySelector('.mapa-zshape[data-shape="circle"]');
+      if (sq) sq.classList.toggle('armado', d.shape === 'square');
+      if (ci) ci.classList.toggle('armado', d.shape !== 'square');
+    }
   }
 
   function setVal(id, v) {
@@ -897,6 +989,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
       var p = propById(M.selProp); p.scale = Math.max(0.2, Math.min(6, (p.scale || 1) * f));
       var g = M.propObj[p.id]; if (g.userData.model) g.userData.model.scale.setScalar(p.scale * PROP_SCALE);
       fillPropPanel(p); markDirty(); return;
+    }
+    if (M.selZone) {
+      pushUndo();
+      var z = zoneById(M.selZone); z.size = Math.max(4, Math.min(80, (z.size || 12) * f));
+      refreshZone(z); markDirty(); refreshSelPanel(); return;
     }
     if (M.sel) {
       var n = nodeById(M.sel); if (!n) return;
@@ -923,8 +1020,12 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   }
 
   function deleteSelected() {
-    if (!(M.selWall || M.selProp || M.sel)) return;
+    if (!(M.selWall || M.selZone || M.selProp || M.sel)) return;
     pushUndo();
+    if (M.selZone) {
+      M.layout.zones = (M.layout.zones || []).filter(function (z) { return z.id !== M.selZone; });
+      M.selZone = null; closePanel(); rebuildScene(); markDirty(); return;
+    }
     if (M.selWall) {
       M.layout.walls = (M.layout.walls || []).filter(function (w) { return w.id !== M.selWall; });
       M.selWall = null; closePanel(); rebuildScene(); markDirty(); return;
@@ -941,13 +1042,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
   function setMode(mode) {
     M.mode = mode; M.armedKind = null; M.armedProp = null; M.cableArming = false; M.cableFrom = null;
-    M.wallArming = false; M.wallFrom = null;
+    M.wallArming = false; M.wallFrom = null; M.zoneArming = false;
     document.getElementById('mapa-modo-ver').classList.toggle('activo', mode === 'ver');
     document.getElementById('mapa-modo-editar').classList.toggle('activo', mode === 'editar');
     document.getElementById('mapa-edit-tools').classList.toggle('oculto', mode !== 'editar');
     document.getElementById('mapa-assets').classList.add('oculto');
-    clearArmedPalette(); setArmedCable(false); setArmedWall(false);
-    hint(mode === 'editar' ? 'Paleta/Assets/Pared para colocar; arrastra para mover todo' : '');
+    clearArmedPalette(); setArmedCable(false); setArmedWall(false); setArmedZone(false);
+    hint(mode === 'editar' ? 'Paleta/Assets/Pared/Zona para colocar; arrastra para mover todo' : '');
   }
 
   function setArmedWall(on) { document.getElementById('mapa-tool-wall').classList.toggle('armado', !!on); }
@@ -962,7 +1063,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   }
 
   function closePanel() {
-    M.sel = null; M.selAgent = null; M.selProp = null; M.selWall = null; clearDistLines();
+    M.sel = null; M.selAgent = null; M.selProp = null; M.selWall = null; M.selZone = null; clearDistLines();
     document.getElementById('mapa-panel').classList.add('oculto');
   }
 
@@ -1081,6 +1182,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
           ey: p.ey || 0, scale: p.scale || 1 }; }),
       walls: (j.walls || []).filter(function (w) { return w.x1 != null && w.x2 != null; }).map(function (w, i) {
         return { id: w.id || 'w' + i, x1: w.x1, z1: w.z1, x2: w.x2, z2: w.z2, h: w.h || WALL_H }; }),
+      zones: (j.zones || []).map(function (z, i) {
+        return { id: z.id || 'z' + i, label: z.label || 'Zona', x: z.x || 0, z: z.z || 0,
+          color: z.color || 0x4a9eff, shape: z.shape || 'circle',
+          size: z.size || (z.scale ? 12 * z.scale : 14), ey: z.ey || 0 }; }),
       cables: (j.cables || []).filter(function (c) { return c.from && c.to; }) };
   }
 
@@ -1182,6 +1287,12 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         { id: 'wv1', x1: 18, z1: 0, x2: 18, z2: 16, h: WALL_H },
         { id: 'wv2', x1: 18, z1: 20, x2: 18, z2: 36, h: WALL_H }
       ],
+      zones: [
+        { id: 'z-prod', label: 'Linea de produccion', x: 9, z: 9, color: 0x4a9eff, shape: 'square', size: 30, ey: 0 },
+        { id: 'z-srv', label: 'Sala de servidores', x: 27, z: 9, color: 0xa78bfa, shape: 'square', size: 30, ey: 0 },
+        { id: 'z-alm', label: 'Almacen', x: 9, z: 27, color: 0x84cc16, shape: 'square', size: 30, ey: 0 },
+        { id: 'z-ctrl', label: 'Sala de control', x: 27, z: 27, color: 0x2dd4bf, shape: 'square', size: 30, ey: 0 }
+      ],
       props: [
         { id: 'b1', file: 'city/building-c.glb', x: 8, z: -6, rot: 0, scale: 1.1 },
         { id: 'b2', file: 'city/building-a.glb', x: 20, z: -6, rot: 0, scale: 1 },
@@ -1196,20 +1307,15 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
       ] };
   }
 
-  /* ── datos en vivo ───────────────────────────────────── */
+  /* ── datos en vivo (100% simulados) ──────────────────── */
 
   function fetchLive() {
     if (!M.visible) return;
-    pull('/api/ble/devices', 'ble', window.MOCK_BLE);
-    pull('/api/modbus', 'modbus', window.MOCK_MODBUS);
-    pull('/api/can', 'can', window.MOCK_CAN);
-    pull('/api/alerts', 'alerts', window.MOCK_ALERTAS);
-  }
-
-  function pull(url, key, mock) {
-    fetch(url).then(function (r) { if (!r.ok) throw 0; return r.json(); })
-      .then(function (d) { M.live[key] = d || []; refreshStatuses(); })
-      .catch(function () { if (mock) { M.live[key] = mock; refreshStatuses(); } });
+    M.live.ble = (window.MOCK_BLE || []).slice();
+    M.live.modbus = (window.MOCK_MODBUS || []).slice();
+    M.live.can = (window.MOCK_CAN || []).slice();
+    M.live.alerts = (window.MOCK_ALERTAS || []).slice();
+    refreshStatuses();
   }
 
   /* ── dispositivos BLE moviles (simulacion) ───────────── */
@@ -1393,6 +1499,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     clearArmedPalette(); clearArmedProp(); setArmedCable(false); M.cableArming = false; M.cableFrom = null;
     document.getElementById('mapa-assets').classList.add('oculto');
     if (M.mode !== 'editar') setMode('editar');
+    M.zoneArming = false; setArmedZone(false);
     M.wallArming = !M.wallArming; M.wallFrom = null; setArmedWall(M.wallArming);
     hint(M.wallArming ? 'Pared: clic en el extremo inicial (Esc para salir)' : '');
   }
@@ -1400,7 +1507,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   function armPalette(kind, btn) {
     var same = M.armedKind === kind;
     clearArmedPalette(); clearArmedProp(); setArmedCable(false); M.cableArming = false; M.cableFrom = null;
-    M.wallArming = false; setArmedWall(false);
+    M.wallArming = false; setArmedWall(false); M.zoneArming = false; setArmedZone(false);
     document.getElementById('mapa-assets').classList.add('oculto');
     M.armedKind = same ? null : kind;
     if (!same) { btn.classList.add('armado'); hint('Clic en el piso para colocar ' + KINDS[kind].label); }
@@ -1470,7 +1577,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
   function armProp(file) {
     clearArmedPalette(); setArmedCable(false); M.cableArming = false;
-    M.wallArming = false; setArmedWall(false);
+    M.wallArming = false; setArmedWall(false); M.zoneArming = false; setArmedZone(false);
     M.armedProp = file;
     document.getElementById('mapa-assets').classList.add('oculto');
     hint('Clic en el piso para colocar: ' + prettyFile(file));
@@ -1487,11 +1594,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   function showXform(on, type) {
     var el = document.getElementById('mp-xform'); if (!el) return;
     el.classList.toggle('oculto', !on);
-    var wall = type === 'wall';
-    ['rx', 'ry', 'rz', 'ey'].forEach(function (k) {
-      document.getElementById('mp-xrow-' + k).classList.toggle('oculto', wall);
-    });
-    document.getElementById('mp-xk-sc').textContent = wall ? 'Altura' : 'Escala';
+    var wall = type === 'wall', zone = type === 'zone';
+    document.getElementById('mp-xrow-rx').classList.toggle('oculto', wall || zone);
+    document.getElementById('mp-xrow-ry').classList.toggle('oculto', wall || zone);
+    document.getElementById('mp-xrow-rz').classList.toggle('oculto', wall || zone);
+    document.getElementById('mp-xrow-ey').classList.toggle('oculto', wall);
+    document.getElementById('mp-xrow-shape').classList.toggle('oculto', !zone);
+    document.getElementById('mp-xk-sc').textContent = wall ? 'Altura' : zone ? 'Tamano' : 'Escala';
     if (on) syncXform();
   }
 
@@ -1500,6 +1609,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     if (!b) return;
     if (b.id === 'mp-xdel') { deleteSelected(); return; }
     var ds = b.dataset;
+    if (ds.shape) { setZoneShape(ds.shape); return; }
     if (ds.rx) rotateAxis('rx', +ds.rx);
     else if (ds.ry) rotateAxis('ry', +ds.ry);
     else if (ds.rz) rotateAxis('rz', +ds.rz);
@@ -1557,10 +1667,12 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     document.getElementById('mapa-modo-editar').addEventListener('click', function () { setMode('editar'); });
     document.getElementById('mapa-tool-cable').addEventListener('click', function () {
       clearArmedPalette(); clearArmedProp(); M.wallArming = false; setArmedWall(false);
+      M.zoneArming = false; setArmedZone(false);
       M.cableArming = !M.cableArming; M.cableFrom = null;
       setArmedCable(M.cableArming); hint(M.cableArming ? 'Cable: clic en el equipo origen' : '');
     });
     document.getElementById('mapa-tool-wall').addEventListener('click', toggleWall);
+    document.getElementById('mapa-tool-zone').addEventListener('click', toggleZone);
     document.getElementById('mapa-floor-apply').addEventListener('click', applyFloorFromUi);
     document.getElementById('mapa-tool-borrar').addEventListener('click', deleteSelected);
     document.getElementById('mapa-undo').addEventListener('click', undo);
@@ -1583,7 +1695,12 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   }
 
   function onLabelEdit() {
-    var node = nodeById(M.sel); if (!node || M.mode !== 'editar') return;
+    if (M.mode !== 'editar') return;
+    if (M.selZone) {
+      var z = zoneById(M.selZone); if (!z) return;
+      z.label = document.getElementById('mp-label').value; renameZoneObj(z); markDirty(); return;
+    }
+    var node = nodeById(M.sel); if (!node) return;
     node.label = document.getElementById('mp-label').value; setNodeLabel(node); markDirty();
   }
 
@@ -1592,6 +1709,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     if (ev.key === 'Escape') {
       clearArmedPalette(); clearArmedProp(); M.cableArming = false; M.cableFrom = null;
       M.wallArming = false; M.wallFrom = null; setArmedWall(false);
+      M.zoneArming = false; setArmedZone(false);
       setArmedCable(false); document.getElementById('mapa-assets').classList.add('oculto'); hint('');
     }
     if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'z' || ev.key === 'Z')) {

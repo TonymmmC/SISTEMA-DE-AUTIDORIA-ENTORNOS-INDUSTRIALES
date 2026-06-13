@@ -248,6 +248,7 @@
             </select>
             <button class="mapa-btn mapa-btn--tool" id="mapa-tool-cable" title="Trazar bus entre dos equipos">Cable</button>
             <button class="mapa-btn mapa-btn--tool" id="mapa-tool-wall" title="Dibujar pared: clic inicio, clic fin">Pared</button>
+            <button class="mapa-btn mapa-btn--tool" id="mapa-tool-zone" title="Crear etiqueta de zona/lugar">Zona</button>
             <button class="mapa-btn mapa-btn--tool" id="mapa-tool-assets" title="Biblioteca de modelos 3D">+ Assets</button>
             <span class="mapa-floor" title="Tamano del piso en metros">
               <span class="mapa-floor-lbl">Piso</span>
@@ -314,6 +315,7 @@
               <div class="mapa-xrow" id="mp-xrow-rz"><span class="mapa-xk">Rotar Z</span><button class="mapa-xb" data-rz="-15">&minus;</button><input class="mapa-xin" id="mp-in-rz" data-k="rz" type="number" step="15"><button class="mapa-xb" data-rz="15">+</button></div>
               <div class="mapa-xrow" id="mp-xrow-ey"><span class="mapa-xk">Altura</span><button class="mapa-xb" data-ey="-1">&minus;</button><input class="mapa-xin" id="mp-in-ey" data-k="ey" type="number" step="0.5"><button class="mapa-xb" data-ey="1">+</button></div>
               <div class="mapa-xrow" id="mp-xrow-sc"><span class="mapa-xk" id="mp-xk-sc">Escala</span><button class="mapa-xb" data-sc="0.85">&minus;</button><input class="mapa-xin" id="mp-in-sc" data-k="sc" type="number" step="0.1"><button class="mapa-xb" data-sc="1.18">+</button></div>
+              <div class="mapa-xrow oculto" id="mp-xrow-shape"><span class="mapa-xk">Forma</span><button class="mapa-xb mapa-zshape" data-shape="square">Cuadrado</button><button class="mapa-xb mapa-zshape" data-shape="circle">Circulo</button></div>
               <button class="mapa-act mapa-act--del" id="mp-xdel" title="Borrar (Supr)">Borrar</button>
             </div>
 
