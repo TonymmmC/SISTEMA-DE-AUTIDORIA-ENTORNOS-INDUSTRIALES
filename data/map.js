@@ -283,15 +283,27 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   }
 
   function addLights(scene) {
-    scene.add(new THREE.HemisphereLight(0xcdddff, 0x20242f, 0.9));
-    var dir = new THREE.DirectionalLight(0xfff2e0, 1.25);
-    dir.position.set(60, 95, 45); dir.castShadow = true;
-    dir.shadow.mapSize.set(2048, 2048); dir.shadow.bias = -0.0004;
+    scene.background = skyGradient();
+    scene.fog = new THREE.Fog(0xdfeaf2, 420, 1000);     // bruma diurna clara, lejos
+    scene.add(new THREE.AmbientLight(0xffffff, 0.32));
+    scene.add(new THREE.HemisphereLight(0xd6ecff, 0xb6a988, 1.05));  // cielo claro / rebote calido
+    var dir = new THREE.DirectionalLight(0xfff6e8, 1.75);  // sol de mediodia
+    dir.position.set(120, 175, 80); dir.castShadow = true;
+    dir.shadow.mapSize.set(2048, 2048); dir.shadow.bias = -0.0004; dir.shadow.normalBias = 0.04;
     var c = dir.shadow.camera;
-    c.left = -100; c.right = 100; c.top = 100; c.bottom = -100; c.near = 1; c.far = 300;
+    c.left = -150; c.right = 150; c.top = 150; c.bottom = -150; c.near = 1; c.far = 500;
     scene.add(dir);
-    var fill = new THREE.DirectionalLight(0x90a8d0, 0.35);
-    fill.position.set(-50, 40, -40); scene.add(fill);
+    var fill = new THREE.DirectionalLight(0xbcd6f2, 0.5);   // relleno del cielo azul
+    fill.position.set(-70, 60, -60); scene.add(fill);
+  }
+
+  function skyGradient() {
+    var c = document.createElement('canvas'); c.width = 2; c.height = 256;
+    var x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 256);
+    g.addColorStop(0, '#7db6e8'); g.addColorStop(0.5, '#aed4f0'); g.addColorStop(1, '#e6f0f6');
+    x.fillStyle = g; x.fillRect(0, 0, 2, 256);
+    var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    return t;
   }
 
   /* ── ambiente (piso configurable en metros) ──────────── */
@@ -300,28 +312,55 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     var scene = M.gl.scene;
     M.env.forEach(function (o) { scene.remove(o); }); M.env = [];
     var sx = GRIDX * CELL, sz = GRIDZ * CELL;
+    // Terreno: explanada muy amplia y oscura que se funde con la bruma del
+    // horizonte, para que la nave quede apoyada y no flotando en una bandeja.
+    var ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(4000, 4000),
+      new THREE.MeshStandardMaterial({ map: asphaltTexture(), color: 0xb4ad9c, roughness: 1, metalness: 0 }));
+    ground.rotation.x = -Math.PI / 2; ground.position.y = -0.12;
+    ground.receiveShadow = true; ground.name = 'ground'; scene.add(ground); M.env.push(ground);
+    // Losa de hormigon de la nave, con franja de seguridad pintada en el borde.
     var floor = new THREE.Mesh(
       new THREE.PlaneGeometry(sx, sz),
-      new THREE.MeshStandardMaterial({ map: concreteTexture(), roughness: 0.92, metalness: 0.02 }));
+      new THREE.MeshStandardMaterial({ map: concreteTexture(), roughness: 0.9, metalness: 0.04 }));
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.name = 'floor';
     scene.add(floor); M.gl.floor = floor; M.env.push(floor);
+  }
+
+  function asphaltTexture() {
+    var c = document.createElement('canvas'); c.width = c.height = 256;
+    var x = c.getContext('2d');
+    x.fillStyle = '#9a9487'; x.fillRect(0, 0, 256, 256);
+    for (var i = 0; i < 6000; i++) {
+      var v = 130 + (Math.random() * 50 | 0);
+      x.fillStyle = 'rgba(' + v + ',' + v + ',' + (v - 8) + ',0.10)';
+      x.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+    }
+    var t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(160, 160);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
   }
 
   function concreteTexture() {
     var c = document.createElement('canvas'); c.width = c.height = 512;
     var x = c.getContext('2d');
-    x.fillStyle = '#54596a'; x.fillRect(0, 0, 512, 512);
-    for (var i = 0; i < 9000; i++) {
-      var v = 150 + (Math.random() * 90 | 0);
-      x.fillStyle = 'rgba(' + v + ',' + v + ',' + (v + 6) + ',0.05)';
-      x.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 3, Math.random() * 3);
+    x.fillStyle = '#60636b'; x.fillRect(0, 0, 512, 512);   // hormigon pulido neutro
+    for (var i = 0; i < 6000; i++) {                         // grano fino del agregado
+      var v = 90 + (Math.random() * 70 | 0);
+      x.fillStyle = 'rgba(' + v + ',' + v + ',' + (v + 4) + ',0.04)';
+      x.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
     }
-    x.strokeStyle = 'rgba(20,24,33,0.55)'; x.lineWidth = 3;
-    for (var g = 0; g <= 512; g += 128) {
-      x.beginPath(); x.moveTo(g, 0); x.lineTo(g, 512); x.moveTo(0, g); x.lineTo(512, g); x.stroke();
+    for (var s = 0; s < 18; s++) {                           // manchas de aceite/uso
+      var r = 12 + Math.random() * 40;
+      x.fillStyle = 'rgba(30,32,38,' + (0.03 + Math.random() * 0.05) + ')';
+      x.beginPath(); x.arc(Math.random() * 512, Math.random() * 512, r, 0, 6.283); x.fill();
     }
+    x.strokeStyle = 'rgba(34,36,42,0.45)'; x.lineWidth = 2;  // juntas de dilatacion
+    x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 512); x.moveTo(0, 0); x.lineTo(512, 0); x.stroke();
     var t = new THREE.CanvasTexture(c);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(Math.max(1, GRIDX / 3), Math.max(1, GRIDZ / 3));
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(Math.max(2, GRIDX / 6), Math.max(2, GRIDZ / 6));  // bahias de ~12 m
     t.colorSpace = THREE.SRGBColorSpace;
     return t;
   }
@@ -378,11 +417,17 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     var a = gridToWorld(wall.x1, wall.z1), b = gridToWorld(wall.x2, wall.z2);
     var dx = b.x - a.x, dz = b.z - a.z, len = Math.sqrt(dx * dx + dz * dz) || 0.1;
     var h = wall.h || WALL_H;
-    var m = new THREE.Mesh(new THREE.BoxGeometry(len, h, WALL_T), mat(0x434a5c, { rough: 0.9, metal: 0.05 }));
-    m.position.set((a.x + b.x) / 2, h / 2, (a.z + b.z) / 2);
-    m.rotation.y = -Math.atan2(dz, dx);
-    m.castShadow = true; m.receiveShadow = true; m.userData.wallId = wall.id;
-    M.gl.scene.add(m); M.wallObj[wall.id] = m;
+    var g = new THREE.Group();
+    var body = new THREE.Mesh(new THREE.BoxGeometry(len, h, WALL_T), mat(0x5a6072, { rough: 0.85, metal: 0.08 }));
+    body.position.y = h / 2; g.add(body);
+    var skirt = new THREE.Mesh(new THREE.BoxGeometry(len, 0.5, WALL_T + 0.12), mat(0x2c313e, { rough: 0.95 }));
+    skirt.position.y = 0.25; g.add(skirt);              // zocalo
+    var cap = new THREE.Mesh(new THREE.BoxGeometry(len, 0.18, WALL_T + 0.18), mat(0x3a404f, { rough: 0.6, metal: 0.3 }));
+    cap.position.y = h; g.add(cap);                     // remate metalico
+    g.position.set((a.x + b.x) / 2, 0, (a.z + b.z) / 2);
+    g.rotation.y = -Math.atan2(dz, dx);
+    g.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } o.userData.wallId = wall.id; });
+    M.gl.scene.add(g); M.wallObj[wall.id] = g;
   }
 
   function refreshWallObj(wall) {
@@ -396,7 +441,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   function pickWall(ev) {
     var ids = Object.keys(M.wallObj); if (!ids.length) return null;
     M.gl.ray.setFromCamera(ndc(ev), M.gl.camera);
-    var hit = M.gl.ray.intersectObjects(ids.map(function (id) { return M.wallObj[id]; }), false)[0];
+    var hit = M.gl.ray.intersectObjects(ids.map(function (id) { return M.wallObj[id]; }), true)[0];
     return hit ? hit.object.userData.wallId : null;
   }
 
@@ -871,9 +916,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
   function fillPropPanel(prop) {
     if (!prop) return;
-    setText('mp-kind', 'Estructura');
+    setText('mp-kind', 'Equipo de planta');
     var lab = document.getElementById('mp-label'); lab.value = prettyFile(prop.file); lab.disabled = true;
-    var est = document.getElementById('mp-estado'); est.textContent = 'decorativo'; est.className = 'mapa-panel-v';
+    var est = document.getElementById('mp-estado'); est.textContent = 'infraestructura'; est.className = 'mapa-panel-v';
     setText('mp-bind', prop.file);
     setText('mp-visto', 'escala ' + (prop.scale || 1).toFixed(2) + ' · rot ' + (prop.rot || 0) + 'gr');
     setText('mp-metric', M.mode === 'editar' ? 'usa los controles de abajo' : 'modo Editar para ajustar');
@@ -1244,67 +1289,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   /* ── layout demo (primer arranque / modo local) ──────── */
 
   function demoLayout() {
-    return { v: 1, floor: { wm: 72, dm: 72 },
-      nodes: [
-        { id: 'edge', kind: 'edge', x: 18, z: 18, label: 'Edge101', rot: 0, bind: { type: '', key: '' } },
-        { id: 'plc-prod', kind: 'plc', x: 9, z: 9, label: 'PLC Produccion', rot: 0, bind: { type: 'modbus', key: '3' } },
-        { id: 'motor-prod', kind: 'motor', x: 5, z: 13, label: 'Motor Bomba', rot: 0, bind: { type: 'can', key: '0x181' } },
-        { id: 'sensor-prod', kind: 'sensor', x: 13, z: 6, label: 'Sensor Temp', rot: 0, bind: { type: 'ble', key: '55:44:33:22:11:00' } },
-        { id: 'io-prod', kind: 'io', x: 6, z: 6, label: 'Remota I/O Prod', rot: 0, bind: { type: 'modbus', key: '1' } },
-        { id: 'plc-srv', kind: 'plc', x: 27, z: 9, label: 'PLC Servidores', rot: 0, bind: { type: 'modbus', key: '5' } },
-        { id: 'io-srv', kind: 'io', x: 31, z: 6, label: 'Gabinete I/O', rot: 0, bind: { type: 'modbus', key: '2' } },
-        { id: 'hmi-srv', kind: 'hmi', x: 31, z: 13, label: 'HMI Servidores', rot: 180, bind: { type: '', key: '' } },
-        { id: 'plc-alm', kind: 'plc', x: 9, z: 27, label: 'PLC Almacen', rot: 0, bind: { type: 'modbus', key: '7' } },
-        { id: 'io-alm', kind: 'io', x: 6, z: 31, label: 'Remota Almacen', rot: 0, bind: { type: 'modbus', key: '12' } },
-        { id: 'sensor-alm', kind: 'sensor', x: 13, z: 31, label: 'Sensor Puerta', rot: 0, bind: { type: 'ble', key: 'DE:AD:BE:EF:00:01' } },
-        { id: 'plc-ctrl', kind: 'plc', x: 27, z: 27, label: 'PLC Control', rot: 0, bind: { type: 'can', key: '0x583' } },
-        { id: 'hmi-ctrl', kind: 'hmi', x: 31, z: 27, label: 'HMI Control', rot: 180, bind: { type: '', key: '' } },
-        { id: 'vfd-ctrl', kind: 'vfd', x: 27, z: 31, label: 'Variador', rot: 0, bind: { type: 'can', key: '0x701' } }
-      ],
-      cables: [
-        { from: 'edge', to: 'plc-prod', bus: 'modbus' },
-        { from: 'edge', to: 'plc-srv', bus: 'modbus' },
-        { from: 'edge', to: 'plc-alm', bus: 'modbus' },
-        { from: 'edge', to: 'plc-ctrl', bus: 'can' },
-        { from: 'edge', to: 'hmi-ctrl', bus: 'ethernet' },
-        { from: 'plc-prod', to: 'motor-prod', bus: 'can' },
-        { from: 'plc-prod', to: 'sensor-prod', bus: 'ble' },
-        { from: 'plc-prod', to: 'io-prod', bus: 'modbus' },
-        { from: 'plc-srv', to: 'io-srv', bus: 'modbus' },
-        { from: 'plc-srv', to: 'hmi-srv', bus: 'ethernet' },
-        { from: 'plc-alm', to: 'io-alm', bus: 'modbus' },
-        { from: 'plc-alm', to: 'sensor-alm', bus: 'ble' },
-        { from: 'plc-ctrl', to: 'hmi-ctrl', bus: 'ethernet' },
-        { from: 'plc-ctrl', to: 'vfd-ctrl', bus: 'can' }
-      ],
-      walls: [
-        { id: 'wp1', x1: 0, z1: 0, x2: 36, z2: 0, h: WALL_H },
-        { id: 'wp2', x1: 36, z1: 0, x2: 36, z2: 36, h: WALL_H },
-        { id: 'wp3', x1: 36, z1: 36, x2: 0, z2: 36, h: WALL_H },
-        { id: 'wp4', x1: 0, z1: 36, x2: 0, z2: 0, h: WALL_H },
-        { id: 'wh1', x1: 0, z1: 18, x2: 16, z2: 18, h: WALL_H },
-        { id: 'wh2', x1: 20, z1: 18, x2: 36, z2: 18, h: WALL_H },
-        { id: 'wv1', x1: 18, z1: 0, x2: 18, z2: 16, h: WALL_H },
-        { id: 'wv2', x1: 18, z1: 20, x2: 18, z2: 36, h: WALL_H }
-      ],
-      zones: [
-        { id: 'z-prod', label: 'Linea de produccion', x: 9, z: 9, color: 0x4a9eff, shape: 'square', size: 30, ey: 0 },
-        { id: 'z-srv', label: 'Sala de servidores', x: 27, z: 9, color: 0xa78bfa, shape: 'square', size: 30, ey: 0 },
-        { id: 'z-alm', label: 'Almacen', x: 9, z: 27, color: 0x84cc16, shape: 'square', size: 30, ey: 0 },
-        { id: 'z-ctrl', label: 'Sala de control', x: 27, z: 27, color: 0x2dd4bf, shape: 'square', size: 30, ey: 0 }
-      ],
-      props: [
-        { id: 'b1', file: 'city/building-c.glb', x: 8, z: -6, rot: 0, scale: 1.1 },
-        { id: 'b2', file: 'city/building-a.glb', x: 20, z: -6, rot: 0, scale: 1 },
-        { id: 'b3', file: 'city/building-l.glb', x: 42, z: 10, rot: 90, scale: 1 },
-        { id: 'b4', file: 'city/building-q.glb', x: 42, z: 26, rot: 90, scale: 1 },
-        { id: 'b5', file: 'city/building-h.glb', x: -6, z: 12, rot: 270, scale: 1 },
-        { id: 'b6', file: 'city/building-e.glb', x: -6, z: 26, rot: 270, scale: 1 },
-        { id: 'b7', file: 'city/building-m.glb', x: 14, z: 42, rot: 180, scale: 1 },
-        { id: 'b8', file: 'city/building-g.glb', x: 28, z: 42, rot: 180, scale: 1 },
-        { id: 't1', file: 'city/detail-tank.glb', x: 24, z: 4, rot: 0, scale: 1 },
-        { id: 'ch1', file: 'city/chimney-medium.glb', x: 4, z: 4, rot: 0, scale: 1 }
-      ] };
+    // Diseño de planta versionado en el proyecto (no depende del Edge ni de SD).
+    // La Planta 3D es una simulacion: este layout siempre carga de forma independiente.
+    return {"v":1,"floor":{"wm":110,"dm":86},"nodes":[{"id":"edge","kind":"edge","x":33,"z":5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Edge101 Auditor","bind":{"type":"","key":""}},{"id":"mon-modbus","kind":"hmi","x":29,"z":2,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Monitor Modbus","bind":{"type":"modbus","key":"3"}},{"id":"mon-can","kind":"hmi","x":33,"z":2,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Monitor CAN","bind":{"type":"can","key":"0x181"}},{"id":"mon-ble","kind":"hmi","x":37,"z":2,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Monitor BLE/RF","bind":{"type":"ble","key":"55:44:33:22:11:00"}},{"id":"sw-audit","kind":"io","x":38,"z":8,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1,"label":"Switch Ethernet","bind":{"type":"modbus","key":"2"}},{"id":"plc-proc","kind":"plc","x":4,"z":3,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"PLC Procesos","bind":{"type":"modbus","key":"5"}},{"id":"io-proc","kind":"io","x":7,"z":7,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Remota Procesos","bind":{"type":"modbus","key":"1"}},{"id":"sensor-temp","kind":"sensor","x":11,"z":2,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Sensor Temp","bind":{"type":"ble","key":"DE:AD:BE:EF:00:01"}},{"id":"sensor-flow","kind":"sensor","x":16,"z":3,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Sensor Caudal","bind":{"type":"ble","key":"AA:BB:CC:11:22:33"}},{"id":"motor-bomba","kind":"motor","x":21,"z":6,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Motor Bomba","bind":{"type":"can","key":"0x701"}},{"id":"plc-prod","kind":"plc","x":6,"z":14,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"PLC Linea","bind":{"type":"modbus","key":"7"}},{"id":"motor-c1","kind":"motor","x":13,"z":14,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0.1,"scale":1.0060089999999997,"label":"Motor Cinta 1","bind":{"type":"can","key":"0x583"}},{"id":"motor-c2","kind":"motor","x":25,"z":14,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Motor Cinta 2","bind":{"type":"can","key":"0x701"}},{"id":"vfd-line","kind":"vfd","x":33,"z":14,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Variador Linea","bind":{"type":"modbus","key":"12"}},{"id":"sensor-line","kind":"sensor","x":20,"z":12,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Sensor Optico","bind":{"type":"ble","key":"11:22:AB:CD:EF:10"}},{"id":"plc-alm","kind":"plc","x":4,"z":22,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"PLC Almacen","bind":{"type":"modbus","key":"7"}},{"id":"io-alm","kind":"io","x":4,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Remota Almacen","bind":{"type":"modbus","key":"12"}},{"id":"sensor-puerta","kind":"sensor","x":11,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Sensor Puerta","bind":{"type":"ble","key":"9C:1D:58:AA:BB:CC"}},{"id":"motor-grua","kind":"motor","x":15,"z":22,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Motor Grua","bind":{"type":"can","key":"0x181"}},{"id":"plc-ctrl","kind":"plc","x":24,"z":22,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"PLC Control","bind":{"type":"can","key":"0x583"}},{"id":"vfd-ctrl","kind":"vfd","x":28,"z":22,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Variador Principal","bind":{"type":"can","key":"0x701"}},{"id":"io-srv","kind":"io","x":24,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"Gabinete I/O","bind":{"type":"modbus","key":"2"}},{"id":"plc-srv","kind":"plc","x":32,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1,"label":"PLC Servidores","bind":{"type":"modbus","key":"5"}},{"id":"hmi-srv","kind":"hmi","x":37,"z":22,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1,"label":"HMI Energia","bind":{"type":"","key":""}}],"props":[{"id":"pa1","file":"factory/screen-hanging-wide.glb","x":33,"z":0.6,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1.4},{"id":"pa2","file":"factory/screen-wide.glb","x":29.5,"z":0.8,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1},{"id":"pa3","file":"factory/screen-wide.glb","x":36.5,"z":0.8,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1},{"id":"pa4","file":"factory/machine-bed.glb","x":26.956411482954415,"z":0.5778961599434442,"rot":270,"rx":0,"ry":270,"rz":0,"ey":0,"scale":1.1},{"id":"pa5","file":"factory/screen-panel-wide.glb","x":26.464747565901554,"z":3.156985308784595,"rot":270,"rx":0,"ry":270,"rz":0,"ey":0.1,"scale":1.18},{"id":"pa6","file":"factory/oopi.glb","x":30,"z":7.5,"rot":30,"rx":0,"ry":30,"rz":0,"ey":0,"scale":0.8},{"id":"pp1","file":"city/detail-tank.glb","x":3.5,"z":8,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pp2","file":"city/detail-tank.glb","x":7,"z":8.3,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":0.9},{"id":"pp3","file":"factory/hopper-high-square.glb","x":21.86614831880559,"z":9.206877479308547,"rot":0,"rx":0,"ry":0,"rz":0,"ey":3,"scale":1.1},{"id":"pp4","file":"factory/hopper-round.glb","x":23,"z":8.3,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pp5","file":"factory/pipe-large-long.glb","x":19.754866043122384,"z":8.016992816739341,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"pp6","file":"factory/pipe-large-valve.glb","x":19.785770935869248,"z":7.305546223158811,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"pp7","file":"factory/pipe-large-bend.glb","x":19.958666028211724,"z":9.18985293657616,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pp8","file":"factory/cog-a.glb","x":2,"z":9,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pc1","file":"factory/conveyor-long.glb","x":9,"z":16.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1.2},{"id":"pc2","file":"factory/conveyor-long.glb","x":13,"z":16.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1.2},{"id":"pc3","file":"factory/conveyor-long.glb","x":17,"z":16.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1.2},{"id":"pc4","file":"factory/conveyor-long.glb","x":21,"z":16.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1.2},{"id":"pc5","file":"factory/conveyor-long.glb","x":25,"z":16.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1.2},{"id":"pc6","file":"factory/conveyor-long.glb","x":29,"z":16.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1.2},{"id":"pr1","file":"factory/robot-arm-a.glb","x":11,"z":14.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.1},{"id":"pr2","file":"factory/robot-arm-b.glb","x":19,"z":14.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.1},{"id":"pr3","file":"factory/robot-arm-a.glb","x":27,"z":14.5,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1.1},{"id":"pm1","file":"factory/machine.glb","x":15,"z":17.8,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pm2","file":"factory/machine-fortified.glb","x":23,"z":17.8,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pm3","file":"factory/machine-window.glb","x":27.660509493672496,"z":17.846809574254547,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pb1","file":"factory/box-small.glb","x":13,"z":16.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pb2","file":"factory/box-wide.glb","x":21,"z":16.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pb3","file":"factory/box-large.glb","x":29,"z":16.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pl1","file":"factory/crane-lift.glb","x":15,"z":21,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.3},{"id":"pl2","file":"factory/box-large.glb","x":3,"z":20.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.2},{"id":"pl3","file":"factory/box-large.glb","x":3,"z":22.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.2},{"id":"pl4","file":"factory/box-small.glb","x":6,"z":20.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pl5","file":"factory/box-wide.glb","x":8,"z":21,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pl6","file":"factory/hopper-square.glb","x":17,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pl7","file":"factory/structure-yellow-short.glb","x":18,"z":21,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pe1","file":"factory/machine-fortified.glb","x":26,"z":20.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pe2","file":"factory/structure-medium.glb","x":38.5,"z":25,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"pe3","file":"factory/pipe-glass-large-long.glb","x":30,"z":20,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"pe4","file":"factory/screen-panel-small.glb","x":39,"z":21,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"px1","file":"city/chimney-medium.glb","x":51.99259764406022,"z":21.742057204993298,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"px2","file":"city/chimney-large.glb","x":44,"z":5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"px3","file":"city/detail-tank.glb","x":44,"z":15,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"px4","file":"city/building-c.glb","x":50.929890397864426,"z":13.581087809056143,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.1},{"id":"px5","file":"city/building-a.glb","x":49.7056551639569,"z":8.335757818035173,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"px6","file":"city/building-l.glb","x":44,"z":24,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"px7","file":"city/building-h.glb","x":7.838543637161585,"z":33.48039069177828,"rot":270,"rx":0,"ry":270,"rz":0,"ey":0,"scale":1},{"id":"px8","file":"city/building-m.glb","x":14,"z":33,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1},{"id":"px9","file":"city/building-g.glb","x":28,"z":33,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1},{"id":"pa7","file":"factory/machine-bed.glb","x":26.396788981326072,"z":9.106879351609388,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pa8","file":"factory/machine-bed.glb","x":39.73185698187652,"z":0.8121316233137232,"rot":180,"rx":0,"ry":180,"rz":0,"ey":0,"scale":1},{"id":"pa9","file":"factory/machine-fortified.glb","x":39,"z":3.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"pa10","file":"factory/screen-small.glb","x":38.68620248755663,"z":6.052010032105076,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":0.9},{"id":"pa11","file":"factory/screen-panel-small.glb","x":26.7,"z":7,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"pa12","file":"factory/button-floor-square.glb","x":31,"z":8.4,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pa13","file":"factory/oopi.glb","x":36,"z":8,"rot":320,"rx":0,"ry":320,"rz":0,"ey":0,"scale":0.7},{"id":"pp9","file":"city/detail-tank.glb","x":3.5,"z":6,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":0.9},{"id":"pp10","file":"factory/hopper-high-round.glb","x":23,"z":6,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pp11","file":"factory/pipe-large-junction.glb","x":20.920030216859942,"z":9.196378495184826,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pp12","file":"factory/pipe-large-cross.glb","x":21.881782252974084,"z":9.198400397763264,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pp13","file":"factory/pipe-large-long.glb","x":22.84312322229102,"z":9.204228582623202,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pp14","file":"factory/pipe-large-bend.glb","x":24,"z":9,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"pp15","file":"factory/cog-b.glb","x":2,"z":7,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":0.9},{"id":"pp16","file":"factory/warning-orange.glb","x":12,"z":9.3,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":0.8},{"id":"pp17","file":"factory/screen-panel-small.glb","x":0.7,"z":4,"rot":270,"rx":0,"ry":270,"rz":0,"ey":0,"scale":1},{"id":"pd1","file":"factory/structure-tall.glb","x":8,"z":10.6,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd2","file":"factory/structure-tall.glb","x":32,"z":10.6,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd3","file":"factory/structure-tall.glb","x":8,"z":18.4,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd4","file":"factory/structure-tall.glb","x":33.099908251161516,"z":18.20919927162825,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd5","file":"factory/catwalk-straight.glb","x":20,"z":11.3,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"pd6","file":"factory/catwalk-stairs.glb","x":4,"z":12,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd7","file":"factory/crane.glb","x":35,"z":15,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.3},{"id":"pd8","file":"factory/machine-window-bar.glb","x":10.436231144044203,"z":17.833005962690358,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd9","file":"factory/piston-round.glb","x":37,"z":17.8,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd10","file":"factory/piston-thin-round.glb","x":15,"z":15.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd11","file":"factory/piston-thin-square.glb","x":23,"z":15.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd12","file":"factory/box-small.glb","x":9,"z":16.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd13","file":"factory/box-long.glb","x":17,"z":16.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd14","file":"factory/box-small.glb","x":25,"z":16.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd15","file":"factory/indicator-special-lines.glb","x":20,"z":18,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"pd16","file":"factory/warning-traffic.glb","x":4,"z":18,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":0.8},{"id":"pd17","file":"factory/arrow.glb","x":33,"z":16.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":0.8},{"id":"lm1","file":"factory/structure-yellow-tall.glb","x":18,"z":24,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"lm2","file":"factory/structure-yellow-tall.glb","x":18,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"lm3","file":"factory/box-wide.glb","x":18,"z":24,"rot":0,"rx":0,"ry":0,"rz":0,"ey":3.2,"scale":0.9},{"id":"lm4","file":"factory/box-small.glb","x":18,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":3.2,"scale":0.9},{"id":"lm5","file":"factory/box-large.glb","x":3,"z":24.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.2},{"id":"lm6","file":"factory/box-small.glb","x":3,"z":24.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":2.6,"scale":1},{"id":"lm7","file":"factory/box-wide.glb","x":6,"z":22.5,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"lm8","file":"factory/box-large.glb","x":8,"z":24,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1.1},{"id":"lm10","file":"factory/hopper-high-square.glb","x":2,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"lm11","file":"factory/arrow-rounded.glb","x":12,"z":23,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":0.8},{"id":"lm12","file":"factory/warning-orange.glb","x":6,"z":20,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":0.8},{"id":"en1","file":"factory/machine-fortified.glb","x":22,"z":24,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"en2","file":"factory/machine-fortified.glb","x":22,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"en3","file":"factory/machine-fortified.glb","x":34,"z":24,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"en4","file":"factory/pipe-glass-large-junction.glb","x":30,"z":20.2,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"en5","file":"factory/pipe-glass-large-long.glb","x":32,"z":20.2,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"en6","file":"factory/structure-window.glb","x":39,"z":23,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"en7","file":"factory/screen-panel-wide.glb","x":39,"z":25.5,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0,"scale":1},{"id":"en8","file":"factory/hopper-round.glb","x":36,"z":26,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"en9","file":"factory/warning-traffic.glb","x":22,"z":20,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":0.8},{"id":"xt1","file":"city/detail-tank.glb","x":44,"z":20,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"xt2","file":"city/detail-tank.glb","x":3.567700263811229,"z":35.138952361204716,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"xt3","file":"city/chimney-small.glb","x":-4,"z":20,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"xt4","file":"city/chimney-large.glb","x":44,"z":10,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"xt5","file":"city/building-k.glb","x":51.891373664867025,"z":17.75631335111636,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":1},{"id":"xt6","file":"city/building-t.glb","x":50.12113409801524,"z":3.215189467291104,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0,"scale":6},{"id":"dr1","file":"factory/structure-doorway-wide.glb","x":25.080330258051127,"z":5.051947269871825,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0.1,"scale":2.2278399999999996},{"id":"dr2","file":"factory/structure-doorway-wide.glb","x":34.04679424244667,"z":9.019172904356626,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0.1,"scale":2.23},{"id":"dr3","file":"factory/structure-doorway-wide.glb","x":12.982771538391898,"z":9.327843443538079,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0.1,"scale":2.2278399999999996},{"id":"dr4","file":"factory/structure-doorway-wide.glb","x":7.116386460191086,"z":18.342706487563042,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0.1,"scale":1.6},{"id":"dr5","file":"factory/structure-doorway-wide.glb","x":30.994462141313363,"z":17.93906496575998,"rot":0,"rx":0,"ry":0,"rz":0,"ey":0.1,"scale":2.23},{"id":"dr6","file":"factory/structure-doorway-wide.glb","x":19.495668863532988,"z":24.076568605951145,"rot":90,"rx":0,"ry":90,"rz":0,"ey":0.1,"scale":1.6}],"walls":[{"id":"wo1","x1":0,"z1":0,"x2":40,"z2":0,"h":4},{"id":"wo2","x1":40,"z1":0,"x2":40,"z2":28,"h":4},{"id":"wo3","x1":40,"z1":28,"x2":0,"z2":28,"h":4},{"id":"wo4","x1":0,"z1":28,"x2":0,"z2":0,"h":4},{"id":"wa1","x1":26,"z1":0,"x2":26,"z2":4,"h":3.4},{"id":"wa2","x1":26,"z1":6,"x2":26,"z2":10,"h":3.4},{"id":"wa3","x1":26,"z1":10,"x2":33,"z2":10,"h":3.4},{"id":"wa4","x1":35,"z1":10,"x2":40,"z2":10,"h":3.4},{"id":"wp1","x1":0,"z1":10,"x2":12,"z2":10,"h":3},{"id":"wp2","x1":14,"z1":10,"x2":26,"z2":10,"h":3},{"id":"wl1","x1":0,"z1":19,"x2":6,"z2":19,"h":3},{"id":"wl2","x1":8,"z1":19,"x2":30,"z2":19,"h":3},{"id":"wl3","x1":32,"z1":19,"x2":40,"z2":19,"h":3},{"id":"we1","x1":20,"z1":19,"x2":20,"z2":23,"h":3},{"id":"we2","x1":20,"z1":25,"x2":20,"z2":28,"h":3}],"zones":[{"id":"z-audit","label":"Sala de Auditoria","x":33,"z":5,"color":4890367,"shape":"square","size":24,"ey":0},{"id":"z-proc","label":"Procesos","x":13,"z":5,"color":10980346,"shape":"square","size":24,"ey":0},{"id":"z-prod","label":"Linea de Produccion","x":20,"z":14.5,"color":3003583,"shape":"square","size":20,"ey":0},{"id":"z-alm","label":"Almacen","x":10,"z":23.5,"color":8702998,"shape":"square","size":20,"ey":0},{"id":"z-energia","label":"Energia y Servidores","x":30,"z":23.5,"color":16096779,"shape":"square","size":20,"ey":0}],"cables":[{"from":"edge","to":"mon-modbus","bus":"ethernet"},{"from":"edge","to":"mon-can","bus":"ethernet"},{"from":"edge","to":"mon-ble","bus":"ethernet"},{"from":"edge","to":"sw-audit","bus":"ethernet"},{"from":"edge","to":"plc-proc","bus":"modbus"},{"from":"edge","to":"plc-prod","bus":"modbus"},{"from":"edge","to":"plc-alm","bus":"modbus"},{"from":"edge","to":"plc-ctrl","bus":"can"},{"from":"edge","to":"plc-srv","bus":"modbus"},{"from":"plc-proc","to":"io-proc","bus":"modbus"},{"from":"plc-proc","to":"sensor-temp","bus":"ble"},{"from":"plc-proc","to":"sensor-flow","bus":"ble"},{"from":"plc-proc","to":"motor-bomba","bus":"can"},{"from":"plc-prod","to":"motor-c1","bus":"can"},{"from":"plc-prod","to":"motor-c2","bus":"can"},{"from":"plc-prod","to":"vfd-line","bus":"modbus"},{"from":"plc-prod","to":"sensor-line","bus":"ble"},{"from":"plc-alm","to":"io-alm","bus":"modbus"},{"from":"plc-alm","to":"sensor-puerta","bus":"ble"},{"from":"plc-alm","to":"motor-grua","bus":"can"},{"from":"plc-ctrl","to":"vfd-ctrl","bus":"can"},{"from":"plc-ctrl","to":"io-srv","bus":"modbus"},{"from":"plc-srv","to":"hmi-srv","bus":"ethernet"}]};
   }
 
   /* ── datos en vivo (100% simulados) ──────────────────── */

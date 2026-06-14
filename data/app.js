@@ -202,7 +202,7 @@ function renderDonut(svgId, legendId, segments) {
   var total = segments.reduce(function(s, x) { return s + x.count; }, 0);
   var r = 40, circ = 2 * Math.PI * r;
   var offset = circ / 4;
-  var html = '<circle cx="60" cy="60" r="40" fill="none" stroke="#1e2235" stroke-width="16"/>';
+  var html = '<circle cx="60" cy="60" r="40" fill="none" stroke="#e2dac9" stroke-width="16"/>';
 
   if (total > 0) {
     segments.forEach(function(seg) {
@@ -216,8 +216,8 @@ function renderDonut(svgId, legendId, segments) {
   }
 
   var label = total > 0 ? String(total) : '--';
-  html += '<text x="60" y="57" text-anchor="middle" fill="#dde1f0" font-size="20" font-weight="700" font-family="system-ui">' + label + '</text>';
-  html += '<text x="60" y="70" text-anchor="middle" fill="#636b80" font-size="8.5" font-family="system-ui">total</text>';
+  html += '<text x="60" y="57" text-anchor="middle" fill="#2c2a23" font-size="20" font-weight="700" font-family="system-ui">' + label + '</text>';
+  html += '<text x="60" y="70" text-anchor="middle" fill="#8c8472" font-size="8.5" font-family="system-ui">total</text>';
   svgEl.innerHTML = html;
 
   if (legendEl) {
@@ -808,11 +808,11 @@ function buildTopology() {
   function gline(x1,y1,x2,y2,dur) {
     var p = 'M'+x1+','+y1+' L'+x2+','+y2;
     return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+
-      '" stroke="#00ff80" stroke-width="14" stroke-opacity="0.1" stroke-dasharray="9 11" filter="url(#gg)" pointer-events="none"/>'+
+      '" stroke="#1f9a52" stroke-width="14" stroke-opacity="0.1" stroke-dasharray="9 11" filter="url(#gg)" pointer-events="none"/>'+
       '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+
-      '" stroke="#3dff8f" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="7 9" pointer-events="none">'+
+      '" stroke="#149043" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="7 9" pointer-events="none">'+
       '<animate attributeName="stroke-dashoffset" from="16" to="0" dur="'+dur+'s" repeatCount="indefinite"/></line>'+
-      '<circle r="3.5" fill="#3dff8f" opacity="0.9" pointer-events="none">'+
+      '<circle r="3.5" fill="#149043" opacity="0.9" pointer-events="none">'+
         '<animateMotion dur="'+(dur*2.5)+'s" repeatCount="indefinite" path="'+p+'"/>'+
       '</circle>';
   }
@@ -833,11 +833,11 @@ function buildTopology() {
     var sa  = sec   ? ' data-sec="'+escAttr(sec)+'"'     : '';
     var nta = ntype ? ' data-ntype="'+escAttr(ntype)+'"' : '';
     return '<g class="topo-node"'+sa+nta+' transform="translate('+x+','+y+')">'+
-      '<circle r="66" fill="'+col+'" fill-opacity="0.04"/>'+
+      '<circle r="66" fill="'+col+'" fill-opacity="0.10"/>'+
       '<circle r="66" fill="none" stroke="'+col+'" stroke-width="0.6" stroke-dasharray="3 10" stroke-opacity="0.32"/>'+
       '<g filter="url(#mg)"><g transform="scale(1.28)">'+iconFn(col)+'</g></g>'+
       '<text y="56" text-anchor="middle" fill="'+col+'" font-size="10.5" font-weight="700" font-family="system-ui" letter-spacing="0.5">'+lbl+'</text>'+
-      '<text y="69" text-anchor="middle" fill="#3a4258" font-size="7.5" font-family="Consolas,monospace">'+sub+'</text>'+
+      '<text y="69" text-anchor="middle" fill="#8c8472" font-size="7.5" font-family="Consolas,monospace">'+sub+'</text>'+
       '</g>';
   }
 
@@ -847,19 +847,19 @@ function buildTopology() {
     var nta = ntype ? ' data-ntype="'+escAttr(ntype)+'"' : '';
     var nka = nkey  ? ' data-nkey="'+escAttr(nkey)+'"'   : '';
     return '<g class="topo-node"'+sa+nta+nka+' transform="translate('+x+','+y+')">'+
-      '<rect x="-38" y="-17" width="76" height="34" rx="5" fill="rgba(12,15,24,0.97)" stroke="'+col+'" stroke-width="1" stroke-opacity="0.45"/>'+
+      '<rect x="-38" y="-17" width="76" height="34" rx="5" fill="rgba(255,255,255,0.95)" stroke="'+col+'" stroke-width="1" stroke-opacity="0.45"/>'+
       '<circle cx="-27" cy="0" r="2.5" fill="'+col+'" opacity="0.75">'+
         '<animate attributeName="opacity" values="0.9;0.25;0.9" dur="2.2s" repeatCount="indefinite"/>'+
       '</circle>'+
       '<text x="2" y="-4" text-anchor="middle" fill="'+col+'" font-size="7.5" font-weight="600" font-family="Consolas,monospace">'+escHtml(lbl)+'</text>'+
-      '<text x="2" y="7" text-anchor="middle" fill="#3a4258" font-size="6.5" font-family="Consolas,monospace">'+escHtml(sub)+'</text>'+
+      '<text x="2" y="7" text-anchor="middle" fill="#8c8472" font-size="6.5" font-family="Consolas,monospace">'+escHtml(sub)+'</text>'+
       '</g>';
   }
 
   // ── ICON PICTOGRAMS (rendered at local 0,0) ───────────
 
   function iconBLE(col) {
-    return '<rect x="-18" y="-14" width="36" height="26" rx="4" fill="rgba(10,14,22,0.92)" stroke="'+col+'" stroke-width="1.4"/>'+
+    return '<rect x="-18" y="-14" width="36" height="26" rx="4" fill="rgba(255,255,255,0.93)" stroke="'+col+'" stroke-width="1.4"/>'+
       '<line x1="0" y1="-14" x2="0" y2="-29" stroke="'+col+'" stroke-width="1.5"/>'+
       '<circle cx="0" cy="-32" r="2.5" fill="'+col+'"/>'+
       '<path d="M-8,-23 Q0,-33 8,-23" fill="none" stroke="'+col+'" stroke-width="1.2" stroke-opacity="0.9"/>'+
@@ -872,14 +872,14 @@ function buildTopology() {
   }
 
   function iconMB(col) {
-    return '<rect x="-20" y="-18" width="40" height="34" rx="3" fill="rgba(10,14,22,0.92)" stroke="'+col+'" stroke-width="1.4"/>'+
-      '<rect x="-16" y="-14" width="32" height="10" rx="2" fill="rgba(22,28,42,0.8)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
+    return '<rect x="-20" y="-18" width="40" height="34" rx="3" fill="rgba(255,255,255,0.93)" stroke="'+col+'" stroke-width="1.4"/>'+
+      '<rect x="-16" y="-14" width="32" height="10" rx="2" fill="rgba(120,108,86,0.10)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
       '<circle cx="-11" cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
       '<circle cx="-6"  cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
       '<circle cx="-1"  cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
       '<circle cx="4"   cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
       '<circle cx="9"   cy="-9" r="1.5" fill="'+col+'" opacity="0.7"/>'+
-      '<rect x="-12" y="0" width="24" height="8" rx="1.5" fill="rgba(22,28,42,0.8)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
+      '<rect x="-12" y="0" width="24" height="8" rx="1.5" fill="rgba(120,108,86,0.10)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
       '<circle cx="12" cy="10" r="3" fill="'+col+'">'+
         '<animate attributeName="opacity" values="0.9;0.25;0.9" dur="0.9s" repeatCount="indefinite"/>'+
       '</circle>'+
@@ -887,8 +887,8 @@ function buildTopology() {
   }
 
   function iconCAN(col) {
-    return '<rect x="-20" y="-16" width="40" height="32" rx="4" fill="rgba(10,14,22,0.92)" stroke="'+col+'" stroke-width="1.4"/>'+
-      '<rect x="-14" y="-11" width="28" height="12" rx="2" fill="rgba(22,28,42,0.8)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
+    return '<rect x="-20" y="-16" width="40" height="32" rx="4" fill="rgba(255,255,255,0.93)" stroke="'+col+'" stroke-width="1.4"/>'+
+      '<rect x="-14" y="-11" width="28" height="12" rx="2" fill="rgba(120,108,86,0.10)" stroke="'+col+'" stroke-width="0.5" stroke-opacity="0.35"/>'+
       '<circle cx="-9" cy="-5" r="1.8" fill="'+col+'" opacity="0.8"/>'+
       '<circle cx="-3" cy="-5" r="1.8" fill="'+col+'" opacity="0.8"/>'+
       '<circle cx="3"  cy="-5" r="1.8" fill="'+col+'" opacity="0.8"/>'+
@@ -903,7 +903,7 @@ function buildTopology() {
   }
 
   function iconSD(col) {
-    return '<path d="M-14,-20 L-14,17 L14,17 L14,-13 L7,-20 Z" fill="rgba(10,14,22,0.92)" stroke="'+col+'" stroke-width="1.4"/>'+
+    return '<path d="M-14,-20 L-14,17 L14,17 L14,-13 L7,-20 Z" fill="rgba(255,255,255,0.93)" stroke="'+col+'" stroke-width="1.4"/>'+
       '<line x1="-8" y1="17" x2="-8" y2="8" stroke="'+col+'" stroke-width="1.5"/>'+
       '<line x1="-4" y1="17" x2="-4" y2="8" stroke="'+col+'" stroke-width="1.5"/>'+
       '<line x1="0"  y1="17" x2="0"  y2="8" stroke="'+col+'" stroke-width="1.5"/>'+
@@ -933,14 +933,14 @@ function buildTopology() {
   });
 
   var sdOk  = state.sdInfo && state.sdInfo.sd;
-  var sdCol = sdOk ? '#22c55e' : '#3a4258';
+  var sdCol = sdOk ? '#22c55e' : '#8c8472';
   var ip    = (state.status && state.status.ip) ? state.status.ip : '--';
 
   // ── BUILD SVG ─────────────────────────────────────────
 
   var buf = '<defs>'+
     '<pattern id="fg" width="55" height="55" patternUnits="userSpaceOnUse">'+
-      '<path d="M55 0L0 0 0 55" fill="none" stroke="#131208" stroke-width="0.55"/>'+
+      '<path d="M55 0L0 0 0 55" fill="none" stroke="rgba(150,138,116,0.22)" stroke-width="0.6"/>'+
     '</pattern>'+
     // Glow filter (for connection lines + icon halos)
     '<filter id="gg" x="-60%" y="-60%" width="220%" height="220%">'+
@@ -952,19 +952,24 @@ function buildTopology() {
       '<feGaussianBlur stdDeviation="4" result="b"/>'+
       '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'+
     '</filter>'+
+    // Fondo claro con leve degradado radial (mas luminoso al centro)
+    '<radialGradient id="topbg" cx="50%" cy="44%" r="72%">'+
+      '<stop offset="0%" stop-color="#fdfbf6"/>'+
+      '<stop offset="100%" stop-color="#ece5d6"/>'+
+    '</radialGradient>'+
     '</defs>'+
     // Background
-    '<rect width="1100" height="520" fill="#07080e"/>'+
+    '<rect width="1100" height="520" fill="url(#topbg)"/>'+
     '<rect width="1100" height="520" fill="url(#fg)"/>'+
-    // Zone ellipses (like floor markings) — pointer-events none: decorativas
-    '<ellipse cx="195" cy="118" rx="90" ry="72" fill="none" stroke="#1c1400" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
-    '<ellipse cx="180" cy="405" rx="90" ry="72" fill="none" stroke="#1c1400" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
-    '<ellipse cx="905" cy="168" rx="90" ry="70" fill="none" stroke="#101528" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
-    '<ellipse cx="820" cy="415" rx="78" ry="60" fill="none" stroke="#0e1a10" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
-    // Floor zone labels
-    '<text x="115"  y="22"  fill="#191200" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA BLE</text>'+
-    '<text x="55"   y="515" fill="#191200" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA RS-485</text>'+
-    '<text x="820"  y="22"  fill="#0e1428" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA CAN</text>';
+    // Zonas (areas tipo planta): tenue lavado de color + borde punteado
+    '<ellipse cx="195" cy="118" rx="90" ry="72" fill="rgba(13,139,125,0.06)" stroke="rgba(13,139,125,0.40)" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
+    '<ellipse cx="180" cy="405" rx="90" ry="72" fill="rgba(193,118,12,0.06)" stroke="rgba(193,118,12,0.40)" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
+    '<ellipse cx="905" cy="168" rx="90" ry="70" fill="rgba(47,111,176,0.06)" stroke="rgba(47,111,176,0.40)" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
+    '<ellipse cx="820" cy="415" rx="78" ry="60" fill="rgba(28,154,75,0.06)" stroke="rgba(28,154,75,0.38)" stroke-width="1.2" stroke-dasharray="3 9" pointer-events="none"/>'+
+    // Etiquetas de zona
+    '<text x="115"  y="22"  fill="#0d8b7d" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA BLE</text>'+
+    '<text x="55"   y="515" fill="#c1760c" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA RS-485</text>'+
+    '<text x="820"  y="22"  fill="#2f6fb0" font-size="10" font-weight="700" font-family="system-ui" letter-spacing="2" pointer-events="none">ZONA CAN</text>';
 
   // Green connection lines (drawn behind everything)
   buf += gline(CX,CY, bP.x,bP.y, 1.1);
@@ -990,11 +995,11 @@ function buildTopology() {
 
   // Center EDGE101 gateway box
   buf += '<g class="topo-node" data-ntype="center" data-sec="" transform="translate('+CX+','+CY+')">'+
-    '<circle r="95" fill="rgba(74,158,255,0.04)" stroke="#4a9eff" stroke-width="0.7" stroke-dasharray="3 8" stroke-opacity="0.42"/>'+
+    '<circle r="95" fill="rgba(47,111,176,0.08)" stroke="#4a9eff" stroke-width="0.7" stroke-dasharray="3 8" stroke-opacity="0.42"/>'+
     // Glowing box frame (blurred) — escalado ~1.28x vs viewBox anterior
     '<g filter="url(#mg)">'+
-      '<rect x="-67" y="-38" width="134" height="76" rx="9" fill="rgba(8,10,18,0.97)" stroke="#4a9eff" stroke-width="2.5"/>'+
-      '<path d="M-67,-38 L-60,-51 L74,-51 L67,-38 Z" fill="#0b1524" stroke="#4a9eff" stroke-width="1"/>'+
+      '<rect x="-67" y="-38" width="134" height="76" rx="9" fill="rgba(255,255,255,0.97)" stroke="#2f6fb0" stroke-width="2.5"/>'+
+      '<path d="M-67,-38 L-60,-51 L74,-51 L67,-38 Z" fill="#dce8f5" stroke="#2f6fb0" stroke-width="1"/>'+
     '</g>'+
     // Ports + LED (no filter → crisp)
     '<rect x="-49" y="-26" width="11" height="9" rx="2" fill="#4a9eff" opacity="0.55"/>'+
@@ -1004,9 +1009,9 @@ function buildTopology() {
     '<circle cx="37" cy="-18" r="5" fill="#22c55e">'+
       '<animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>'+
     '</circle>'+
-    '<text y="9"  text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="system-ui" letter-spacing="1">EDGE101</text>'+
-    '<text y="26" text-anchor="middle" fill="#4a9eff" font-size="10" font-family="system-ui" letter-spacing="0.5">AUDITOR IIoT</text>'+
-    '<text y="54" text-anchor="middle" fill="#3a4258" font-size="9" font-family="Consolas,monospace">'+escHtml(ip)+'</text>'+
+    '<text y="9"  text-anchor="middle" fill="#1f2a38" font-size="13" font-weight="700" font-family="system-ui" letter-spacing="0.5">AUDITORIA</text>'+
+    '<text y="26" text-anchor="middle" fill="#2f6fb0" font-size="9.5" font-family="system-ui" letter-spacing="0.5">Y MONITOREO IIoT</text>'+
+    '<text y="54" text-anchor="middle" fill="#8c8472" font-size="9" font-family="Consolas,monospace">'+escHtml(ip)+'</text>'+
     '</g>';
 
   svg.innerHTML = buf;
