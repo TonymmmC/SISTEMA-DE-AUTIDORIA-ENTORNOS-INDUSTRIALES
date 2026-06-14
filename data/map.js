@@ -547,7 +547,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   }
 
   function refreshStatuses() {
-    if (!M.ready) return;
+    if (!M.ready || !M.layout) return;
     var activos = 0;
     M.layout.nodes.forEach(function (node) {
       var g = M.nodeObj[node.id]; if (!g) return;
