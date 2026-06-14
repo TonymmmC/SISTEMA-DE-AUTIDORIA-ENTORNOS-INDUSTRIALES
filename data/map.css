@@ -35,12 +35,12 @@
 }
 
 .mapa-btn:hover { border-color: var(--accent); }
-.mapa-btn.activo { background: var(--accent); border-color: var(--accent); color: #0b1018; font-weight: 600; }
+.mapa-btn.activo { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .mapa-btn--icon { width: 32px; padding: .4rem 0; text-align: center; font-weight: 700; }
-.mapa-btn--save { background: var(--ok); border-color: var(--ok); color: #06210f; font-weight: 600; }
+.mapa-btn--save { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 600; }
 .mapa-btn--save:hover { filter: brightness(1.08); }
 .mapa-btn--danger:hover { border-color: var(--crit); color: var(--crit); }
-.mapa-btn--tool.armado { background: var(--accent); border-color: var(--accent); color: #0b1018; }
+.mapa-btn--tool.armado { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 .mapa-sel {
   background: var(--surf2);
@@ -68,7 +68,7 @@
 }
 
 .mapa-pal-btn:hover { border-color: var(--accent); }
-.mapa-pal-btn.armado { background: var(--accent); border-color: var(--accent); color: #0b1018; font-weight: 600; }
+.mapa-pal-btn.armado { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .mapa-pal-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
 .mapa-floor {
@@ -119,7 +119,9 @@
   bottom: .65rem;
   font-size: .72rem;
   color: var(--muted);
-  background: rgba(12,15,23,.7);
+  background: rgba(251,248,241,.9);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
   padding: .3rem .55rem;
   border-radius: var(--r);
   pointer-events: none;
@@ -143,11 +145,12 @@
   top: .75rem;
   right: .75rem;
   width: 248px;
-  background: rgba(20,24,34,.94);
+  background: rgba(251,248,241,.96);
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: .85rem;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-lg);
 }
 
 .mapa-panel-x {
@@ -173,7 +176,7 @@
 
 .mapa-panel-label {
   width: 100%;
-  background: var(--surf);
+  background: var(--surf2);
   border: 1px solid var(--border);
   border-radius: var(--r);
   color: var(--text);
@@ -216,10 +219,10 @@
 }
 .mapa-xb:hover { border-color: var(--accent); }
 .mapa-zshape { width: auto; flex: 1; font-size: .74rem; padding: .3rem .3rem; }
-.mapa-zshape.armado { background: var(--accent); border-color: var(--accent); color: #0b1018; font-weight: 600; }
+.mapa-zshape.armado { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .mapa-xin {
   width: 56px;
-  background: var(--surf);
+  background: var(--surf2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--r);
@@ -248,7 +251,7 @@
 .mapa-panel-bindbox { margin-top: .7rem; display: flex; flex-direction: column; gap: .4rem; }
 .mapa-panel-sel {
   width: 100%;
-  background: var(--surf);
+  background: var(--surf2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--r);
@@ -275,11 +278,12 @@
   max-height: calc(100% - 1.5rem);
   display: flex;
   flex-direction: column;
-  background: rgba(20,24,34,.96);
+  background: rgba(251,248,241,.97);
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: .7rem;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-lg);
 }
 .mapa-assets-hdr {
   display: flex;
@@ -292,7 +296,7 @@
 }
 .mapa-assets-q {
   width: 100%;
-  background: var(--surf);
+  background: var(--surf2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--r);

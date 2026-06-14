@@ -1,21 +1,26 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:      #0f1117;
-  --surf:    #171b26;
-  --surf2:   #1e2235;
-  --border:  #252a3a;
-  --text:    #dde1f0;
-  --muted:   #636b80;
-  --accent:  #4a9eff;
-  --teal:    #2dd4bf;
-  --ok:      #22c55e;
-  --lime:    #84cc16;
-  --warn:    #f59e0b;
-  --crit:    #ef4444;
-  --purple:  #a855f7;
+  color-scheme: light;
+  /* Tema MARFIL: fondo arena calido, tarjetas marfil, texto negro calido. */
+  --bg:      #e8e1d2;
+  --surf:    #fbf8f1;
+  --surf2:   #f1ebdf;
+  --border:  #dad1bf;
+  --text:    #2c2a23;
+  --muted:   #8c8472;
+  --accent:  #2f6fb0;
+  --teal:    #0d8b7d;
+  --ok:      #1c9a4b;
+  --lime:    #5d8a14;
+  --warn:    #c1760c;
+  --crit:    #cf3b3b;
+  --purple:  #7c46cf;
+  --track:   #e2dac9;
+  --shadow:    0 1px 2px rgba(70,58,34,.05), 0 2px 6px rgba(70,58,34,.06);
+  --shadow-lg: 0 12px 32px rgba(70,58,34,.16);
   --mono:    'Consolas', 'Courier New', monospace;
-  --r:       6px;
+  --r:       8px;
 }
 
 body {
@@ -34,22 +39,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: .75rem 1.5rem;
-  background: var(--surf);
+  padding: .7rem 1.5rem;
+  background: linear-gradient(180deg, #fdfbf6 0%, #f4eee2 100%);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 100;
   gap: 1rem;
 }
+/* Hairline de acento: reemplaza la linea plana generica */
+.topbar::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--teal) 45%, var(--warn) 100%);
+  opacity: .75;
+}
 
-.topbar-brand { display: flex; align-items: center; gap: .75rem; }
+.topbar-brand { display: flex; align-items: center; gap: .7rem; }
 
-.brand-icon { width: 32px; height: 32px; color: var(--accent); flex-shrink: 0; }
-
-.brand-name { font-weight: 700; font-size: 1rem; color: var(--text); letter-spacing: -.01em; }
-
-.brand-ip { font-family: var(--mono); font-size: .72rem; color: var(--muted); margin-top: 1px; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+.brand-name { font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: .01em; }
+.brand-ip { font-family: var(--mono); font-size: .68rem; color: var(--muted); }
 
 .topbar-center {
   display: flex;
@@ -68,7 +77,7 @@ body {
   font-size: .72rem;
   font-weight: 600;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,.03);
+  background: rgba(0,0,0,.025);
   color: var(--muted);
   letter-spacing: .02em;
 }
@@ -125,39 +134,49 @@ body {
 /* ── SIDEBAR ─────────────────────────────────────────── */
 
 .sidebar {
-  background: var(--surf);
+  background: linear-gradient(180deg, #faf6ee 0%, #f0e9dc 100%);
   border-right: 1px solid var(--border);
-  padding: .75rem 0;
-  display: flex; flex-direction: column;
+  padding: .85rem .55rem;
+  display: flex; flex-direction: column; gap: 2px;
 }
 
 .nav-item {
-  display: flex; align-items: center; gap: .625rem;
-  padding: .6rem 1rem;
+  display: flex; align-items: center; gap: .55rem;
+  padding: .5rem .55rem;
   color: var(--muted); text-decoration: none;
-  font-size: .82rem;
+  font-size: .82rem; font-weight: 600;
+  border-radius: 10px;
   transition: color .15s, background .15s;
   position: relative;
 }
-.nav-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+.nav-item:hover { background: rgba(0,0,0,.05); color: var(--text); }
 .nav-item.activo {
-  background: rgba(74,158,255,.1); color: var(--accent);
-  border-left: 2px solid var(--accent);
-  padding-left: calc(1rem - 2px);
+  background: linear-gradient(90deg, rgba(47,111,176,.16) 0%, rgba(47,111,176,.04) 100%);
+  color: var(--accent);
+}
+.nav-item.activo::before {
+  content: ''; position: absolute; left: -.1rem; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 58%; border-radius: 99px; background: var(--accent);
 }
 
-.ni { font-size: 1rem; flex-shrink: 0; width: 1.25rem; text-align: center; }
+.ni {
+  flex-shrink: 0; width: 1.7rem; height: 1.7rem; border-radius: 8px;
+  display: grid; place-items: center; font-size: .95rem;
+  background: rgba(0,0,0,.045); transition: background .15s, color .15s;
+}
+.nav-item:hover .ni { background: rgba(0,0,0,.08); }
+.nav-item.activo .ni { background: var(--accent); color: #fff; box-shadow: 0 2px 6px rgba(47,111,176,.4); }
 .nl { flex: 1; }
 
 .nav-chip {
   font-size: .65rem; font-weight: 700;
   padding: .1rem .35rem;
-  background: rgba(74,158,255,.2); color: var(--accent);
+  background: var(--accent); color: #fff;
   border-radius: 99px; min-width: 1.2rem; text-align: center; display: none;
 }
 .nav-chip.visible { display: block; }
 
-.nav-sep { height: 1px; background: var(--border); margin: .5rem .75rem; }
+.nav-sep { height: 1px; background: var(--border); margin: .55rem .5rem; }
 
 /* ── MAIN ────────────────────────────────────────────── */
 
@@ -405,7 +424,7 @@ main section { max-width: 1200px; }
 .ev-src--ble    { background: rgba(45,212,191,.12); color: var(--teal); }
 .ev-src--modbus { background: rgba(245,158,11,.12);  color: var(--warn); }
 .ev-src--can    { background: rgba(74,158,255,.12);  color: var(--accent); }
-.ev-src--other  { background: rgba(255,255,255,.06); color: var(--muted); }
+.ev-src--other  { background: rgba(0,0,0,.05); color: var(--muted); }
 .ev-src--warn   { background: rgba(245,158,11,.12);  color: var(--warn); }
 .ev-src--crit   { background: rgba(239,68,68,.12);   color: var(--crit); }
 
@@ -593,18 +612,21 @@ main section { max-width: 1200px; }
 /* ── TABLES ──────────────────────────────────────────── */
 
 table { width: 100%; border-collapse: collapse; font-size: .8rem; }
-thead { background: rgba(255,255,255,.03); }
+thead { background: var(--surf2); position: sticky; top: 0; z-index: 1; }
 th {
-  text-align: left; padding: .5rem .875rem;
+  text-align: left; padding: .55rem .875rem;
   color: var(--muted); font-size: .68rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: .07em;
   border-bottom: 1px solid var(--border);
 }
 td {
   padding: .5rem .875rem;
-  border-bottom: 1px solid rgba(255,255,255,.03);
+  border-bottom: 1px solid rgba(0,0,0,.05);
   font-family: var(--mono); font-size: .78rem;
 }
+tbody tr { transition: background .12s; }
+tbody tr:nth-child(even) td { background: rgba(0,0,0,.018); }
+tbody tr:hover td { background: rgba(47,111,176,.07); }
 td a { color: var(--accent); text-decoration: none; font-size: .75rem; }
 td a:hover { text-decoration: underline; }
 
@@ -686,11 +708,11 @@ td a:hover { text-decoration: underline; }
   border-radius: var(--r);
   overflow: hidden;
   margin-bottom: 1rem;
-  background: #0b0e16;
+  background: var(--surf);
 }
 
 .topo-node[data-sec] { cursor: pointer; transition: filter .15s; }
-.topo-node[data-sec]:hover { filter: brightness(1.3) drop-shadow(0 0 6px rgba(255,255,255,.1)); }
+.topo-node[data-sec]:hover { filter: brightness(1.08) drop-shadow(0 1px 4px rgba(0,0,0,.18)); }
 
 /* Módulos y centro: iluminar el círculo de zona (fill casi transparente no reacciona al brightness) */
 .topo-node[data-ntype^="mod"] > circle,
@@ -705,14 +727,14 @@ td a:hover { text-decoration: underline; }
 
 .topo-tt {
   position: absolute;
-  background: rgba(13,15,22,0.97);
+  background: rgba(251,248,241,0.98);
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: .65rem .9rem;
   min-width: 195px; max-width: 255px;
   pointer-events: none;
   z-index: 20;
-  box-shadow: 0 8px 28px rgba(0,0,0,.65);
+  box-shadow: var(--shadow-lg);
   backdrop-filter: blur(10px);
   transition: opacity .12s;
 }
@@ -755,7 +777,7 @@ td a:hover { text-decoration: underline; }
 .disk-status--warn { background: rgba(245,158,11,.12); color: var(--warn); border: 1px solid rgba(245,158,11,.25); }
 
 .disk-bar-track {
-  height: 12px; background: var(--bg);
+  height: 12px; background: var(--track);
   border-radius: 99px; overflow: hidden;
   border: 1px solid var(--border); margin-bottom: .6rem;
 }
@@ -787,7 +809,7 @@ td a:hover { text-decoration: underline; }
 .sysm-lbl { font-size: .68rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .6rem; }
 
 .sysm-gauge {
-  height: 10px; background: var(--bg);
+  height: 10px; background: var(--track);
   border-radius: 99px; overflow: hidden;
   border: 1px solid var(--border); margin-bottom: .5rem;
 }
@@ -850,3 +872,101 @@ td a:hover { text-decoration: underline; }
   .sys-tile--span2 { grid-column: span 1; }
   .sys-bus-row { grid-template-columns: 1fr; }
 }
+
+/* ── PULIDO MARFIL ─────────────────────────────────────
+ * Profundidad por sombras suaves (no por contraste de fondo, como en oscuro).
+ * Listas y tablas con realce al pasar el cursor. */
+
+.kpi-card, .chart-card, .dev-card, .sys-tile, .sys-bus-card,
+.al-sum-card, .disk-card, .sysm-card, .ev-src-stat, .empty-state {
+  box-shadow: var(--shadow);
+}
+
+/* Viewports de instrumento (diagrama de red y mapa 3D): pantallas oscuras
+ * intencionales, enmarcadas con sombra para integrarse al marfil. */
+.topo-card, .mapa-wrap { box-shadow: var(--shadow-lg); }
+
+/* Elevacion del marco principal (el hairline lo da .topbar::after) */
+.topbar { box-shadow: 0 4px 14px rgba(70,58,34,.06); }
+
+/* Tarjetas interactivas: leve realce al pasar el cursor */
+.kpi-card, .dev-card, .sys-bus-card, .al-sum-card { transition: box-shadow .16s, transform .16s, border-color .16s; }
+.kpi-card:hover, .sys-bus-card:hover, .al-sum-card:hover {
+  box-shadow: var(--shadow-lg); transform: translateY(-1px);
+}
+.dev-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); border-color: rgba(47,111,176,.35); }
+
+/* Listas de eventos: filas mas vivas */
+.ev-item { transition: background .14s, border-color .14s, box-shadow .14s; }
+.ev-item:hover { background: var(--surf2); box-shadow: var(--shadow); border-left-width: 4px; }
+
+/* Tarjetas de tabla envueltas: bordes y sombra coherentes */
+.tabla-wrap, .card-tabla {
+  background: var(--surf); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow);
+}
+
+/* Chips redondeados un poco mas suaves en claro */
+.count-chip, .nav-chip { box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
+
+/* Scrollbars marfil */
+* { scrollbar-width: thin; scrollbar-color: #c8bfa9 transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #cfc6b0; border-radius: 99px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: #bcb295; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Foco accesible coherente con el tema */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* ── FLOREADO / VISUAL (para vender en jornadas) ───────
+ * Mas grafico, menos texto plano: iconos en tiles de color, halos suaves,
+ * acentos en titulos y degradados elegantes. */
+
+/* KPI: icono en tile de color + halo decorativo en la esquina */
+.kpi-card { padding-top: 1rem; }
+.kpi-icon {
+  width: 2rem; height: 2rem; border-radius: 9px;
+  display: inline-grid; place-items: center; font-size: 1rem;
+  background: rgba(47,111,176,.10); margin-bottom: .5rem;
+}
+.kpi-card--teal  .kpi-icon { background: rgba(13,139,125,.14); }
+.kpi-card--amber .kpi-icon { background: rgba(193,118,12,.14); }
+.kpi-card--blue  .kpi-icon { background: rgba(47,111,176,.14); }
+.kpi-card::after {
+  content: ''; position: absolute; right: -34px; top: -34px;
+  width: 96px; height: 96px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(47,111,176,.10), transparent 70%);
+}
+.kpi-card--teal::after  { background: radial-gradient(circle, rgba(13,139,125,.13), transparent 70%); }
+.kpi-card--amber::after { background: radial-gradient(circle, rgba(193,118,12,.13), transparent 70%); }
+.kpi-card--blue::after  { background: radial-gradient(circle, rgba(47,111,176,.13), transparent 70%); }
+
+/* Titulos de seccion con barra de acento */
+.sec-title { position: relative; padding-left: .62rem; }
+.sec-title::before {
+  content: ''; position: absolute; left: 0; top: .12em; bottom: .12em;
+  width: 3px; border-radius: 99px;
+  background: linear-gradient(180deg, var(--accent), var(--teal));
+}
+
+/* Pills de bus del topbar: anillo de color y mas presencia */
+.bus-pill { box-shadow: var(--shadow); }
+.bus-pill .pill-dot { box-shadow: 0 0 0 3px currentColor; opacity: .9; filter: saturate(1.1); }
+
+/* Cards de bus del sistema: barra superior de color */
+.sys-bus-card { position: relative; overflow: hidden; }
+.sys-bus-card::after {
+  content: ''; position: absolute; right: -28px; bottom: -28px;
+  width: 78px; height: 78px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(47,111,176,.08), transparent 70%);
+}
+.sys-bus-card--ble::after { background: radial-gradient(circle, rgba(13,139,125,.12), transparent 70%); }
+.sys-bus-card--mb::after  { background: radial-gradient(circle, rgba(193,118,12,.12), transparent 70%); }
+.sys-bus-card--can::after { background: radial-gradient(circle, rgba(47,111,176,.12), transparent 70%); }
+
+/* Chart cards: leve realce al pasar */
+.chart-card { transition: box-shadow .16s, transform .16s; }
+.chart-card:hover { box-shadow: var(--shadow-lg); }
